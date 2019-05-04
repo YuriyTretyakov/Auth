@@ -42,3 +42,7 @@ testem.log
 # System Files
 .DS_Store
 Thumbs.db
+.vs/Authorization/v15/Server/sqlite3/storage.ide-wal
+.vs/Authorization/v15/Server/sqlite3/storage.ide-shm
+.vs/Authorization/v15/Server/sqlite3/storage.ide
+.vs/Authorization/v15/Server/sqlite3/db.lock
