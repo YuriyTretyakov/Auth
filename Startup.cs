@@ -60,25 +60,27 @@ namespace Authorization
 
 
 
-            services
-                .AddAuthentication(options =>
+            services.AddAuthentication(options =>
                 {
                     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                     options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
                     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 
-                })
-                .AddJwtBearer(cfg =>
+                }).AddJwtBearer(cfg =>
                 {
                     //cfg.Authority = "https://sts.windows.net/";
                     cfg.RequireHttpsMetadata = false;
                     cfg.SaveToken = true;
                     cfg.TokenValidationParameters = new TokenValidationParameters
                     {
+                        ValidateIssuerSigningKey = true,
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
                         ValidIssuer = Configuration["JwtIssuer"],
                         ValidAudience = Configuration["JwtIssuer"],
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JwtKey"])),
-                        ClockSkew = TimeSpan.Zero // remove delay of token when expire
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(Configuration["JwtKey"])),
+                        ValidateLifetime = true,
+                        ClockSkew = TimeSpan.Zero,
                     };
                    
                 });
@@ -113,7 +115,7 @@ namespace Authorization
                 );
 
             });
-
+            app.UseAuthentication();
             seedData.SeedUsers().Wait();
         }
     }
