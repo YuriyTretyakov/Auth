@@ -21,10 +21,6 @@ namespace Authorization.Controllers
         private readonly IConfiguration _configuration;
 
 
-        //private readonly string _jwtKey = "SOME_RANDOM_KEY_DO_NOT_SHARE";
-        //private readonly string _jwtIssuer = "http://yourdomain.com";
-        //private readonly int _jwtExpireDays = 30;
-
 
         public AuthController(SignInManager<User> signInManager, UserManager<User> userManager, IConfiguration configuration)
         {

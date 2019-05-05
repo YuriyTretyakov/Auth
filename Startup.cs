@@ -42,7 +42,7 @@ namespace Authorization
             services.AddSingleton<IConfiguration>(_config);
             services.AddDbContext<AuthDbContext>();
             services.AddTransient<AuthDataSeeder>();
-           
+
 
 
             services.AddIdentity<User, IdentityRole>(config =>
@@ -53,9 +53,13 @@ namespace Authorization
 
             }).AddDefaultTokenProviders()
               .AddEntityFrameworkStores<AuthDbContext>();
+
             services.AddLogging();
 
             JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear(); // => remove default claims
+
+
+
             services
                 .AddAuthentication(options =>
                 {
@@ -66,7 +70,7 @@ namespace Authorization
                 })
                 .AddJwtBearer(cfg =>
                 {
-                    cfg.Authority = "https://sts.windows.net/";
+                    //cfg.Authority = "https://sts.windows.net/";
                     cfg.RequireHttpsMetadata = false;
                     cfg.SaveToken = true;
                     cfg.TokenValidationParameters = new TokenValidationParameters
