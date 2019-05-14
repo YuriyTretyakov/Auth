@@ -50,6 +50,19 @@ namespace Authorization.Controllers
                 return BadRequest();
         }
 
+        [HttpGet("LoginWithGoogle")]
+        public void LoginWithGoogle()
+        {
+            var redirectUrl = $"https://accounts.google.com/o/oauth2/auth?" +
+                            $"redirect_uri=https://localhost:5001/signin-google&" +
+                            $"response_type=code&client_id={_configuration["ClientId"]}&" +
+                            $"scope=https://www.googleapis.com/auth/userinfo.email+https://www.googleapis.com/auth/userinfo.profile&" +
+                            $"approval_prompt=force&access_type=offline";
+
+            Response.Redirect(redirectUrl);
+        }
+
+
         private string GenerateJwtToken(string email, IdentityUser user)
         {
             var identity = new ClaimsIdentity(
