@@ -46,9 +46,15 @@ namespace Authorization
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 
-            }).AddJwtBearer(cfg =>
+            }).AddGoogle(google=>
             {
-                //cfg.Authority = "https://sts.windows.net/";
+                google.ClientId = "343168613955-mur5rn4tokpejtlg6bcimqtvt47c83qa.apps.googleusercontent.com";
+                google.ClientSecret = "WSjlMzleX5B1SfeMlOUxb3HY";
+                google.CallbackPath = "/signin-google";
+            })
+            .AddJwtBearer(cfg =>
+            {
+               
                 cfg.RequireHttpsMetadata = false;
                 cfg.SaveToken = true;
                 cfg.TokenValidationParameters = new TokenValidationParameters
