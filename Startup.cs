@@ -15,6 +15,10 @@ using Microsoft.AspNetCore.Identity;
 using Swashbuckle.AspNetCore.Swagger;
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
+using Authorization.Middlewares;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Facebook;
+using Microsoft.AspNetCore.Authentication.Google;
 
 namespace Authorization
 {
@@ -35,7 +39,12 @@ namespace Authorization
         public void ConfigureServices(IServiceCollection services)
         {
             const string authName = "Authorization";
-
+            services.Configure<CookiePolicyOptions>(options =>
+            {
+                // This lambda determines whether user consent for non-essential cookies is needed for a given request.
+                options.CheckConsentNeeded = context => true;
+               
+            });
             services.AddAuthorization(options => {
                 options.DefaultPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
                     .RequireAuthenticatedUser()
@@ -47,22 +56,32 @@ namespace Authorization
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+                
 
-            }).AddGoogle(google=>
+            }).AddFacebook(facebookOptions =>
+                {
+                    facebookOptions.AppId = Configuration["FaceBookAppId"];
+                    facebookOptions.AppSecret = Configuration["FaceBookSecret"];
+                })
+                .AddCookie((options => { options.Cookie.IsEssential = true; }))
+                .AddGoogle(google=>
             {
+                google.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                 google.ClientId = Configuration["ClientId"];
                 google.ClientSecret = Configuration["ClientSecret"];
                // google.CallbackPath = "/signin-google";
-                google.UserInformationEndpoint = "https://www.googleapis.com/oauth2/v2/userinfo";
-                google.ClaimActions.Clear();
-                google.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
-                google.ClaimActions.MapJsonKey(ClaimTypes.Name, "name");
-                google.ClaimActions.MapJsonKey(ClaimTypes.GivenName, "given_name");
-                google.ClaimActions.MapJsonKey(ClaimTypes.Surname, "family_name");
-                google.ClaimActions.MapJsonKey("urn:google:profile", "link");
-                google.ClaimActions.MapJsonKey(ClaimTypes.Email, "email");
-                google.ClaimActions.MapJsonKey("urn:google:image", "picture");
-                google.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "sub");
+                //google.UserInformationEndpoint = "https://www.googleapis.com/oauth2/v2/userinfo";
+                //google.ClaimActions.Clear();
+                //google.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
+                //google.ClaimActions.MapJsonKey(ClaimTypes.Name, "name");
+                //google.ClaimActions.MapJsonKey(ClaimTypes.GivenName, "given_name");
+                //google.ClaimActions.MapJsonKey(ClaimTypes.Surname, "family_name");
+                //google.ClaimActions.MapJsonKey("urn:google:profile", "link");
+                //google.ClaimActions.MapJsonKey(ClaimTypes.Email, "email");
+                //google.ClaimActions.MapJsonKey("urn:google:image", "picture");
+                ////google.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "sub");
             })
             .AddJwtBearer(cfg =>
             {
@@ -132,6 +151,12 @@ namespace Authorization
                 app.UseHsts();
             }
 
+            app.UseAuthentication();
+
+
+          
+
+            app.UseMiddleware<Middleware>();
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
@@ -141,8 +166,8 @@ namespace Authorization
 
             app.UseHttpsRedirection();
 
-            app.UseAuthentication();
-
+            
+            
             app.UseMvc();
             seedData.SeedUsers().Wait();
         }
