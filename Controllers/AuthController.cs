@@ -9,6 +9,7 @@ using Authorization.Identity;
 using Authorization.ResponseModels;
 using Authorization.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -24,7 +25,9 @@ namespace Authorization.Controllers
         private readonly UserManager<User> _userManager;
         private readonly IConfiguration _configuration;
 
-        private readonly string _scope = "email,first_name,last_name,picture";
+        private readonly string _appscope = "email";
+        private readonly string _userRequestScope = "first_name,last_name,email,picture";
+        private readonly string _display = "iframe";
         //private readonly string _jwtKey = "SOME_RANDOM_KEY_DO_NOT_SHARE";
         //private readonly string _jwtIssuer = "http://yourdomain.com";
         //private readonly int _jwtExpireDays = 30;
@@ -82,11 +85,17 @@ namespace Authorization.Controllers
         [HttpGet("SignInFacebook")]
         public void LoginFacebook()
         {
-            var callBackUrl = $"{ HttpContext.Request.Scheme}://{HttpContext.Request.Host}/auth/FBCallback";
+
+            var callBackUrl = GetCallBackUrl(HttpContext);
             var loginfaceBookUrl = $"https://www.facebook.com/v6.0/dialog/oauth?" +
                                   $"client_id={_configuration["FaceBookAppId"]}" +
                                   $"&redirect_uri={callBackUrl}" +
-                                  $"&state=state123abc,ds=123456789";
+                                  $"&scope={_appscope}" +
+                                  $"&display={_display}";
+
+
+
+
             Response.Redirect(loginfaceBookUrl);
         }
 
@@ -127,7 +136,7 @@ namespace Authorization.Controllers
             if (code == null)
                 return BadRequest("Unable to retrieve verification code");
 
-            var callBackUrl = $"{ HttpContext.Request.Scheme}://{HttpContext.Request.Host}/auth/FBCallback";
+            var callBackUrl = GetCallBackUrl(HttpContext);
 
             var token = await GetToken(code, callBackUrl);
 
@@ -136,48 +145,25 @@ namespace Authorization.Controllers
 
 
             var userData = await GetUserInfo(token.AccessToken);
-            //var info = await _signInManager.GetExternalLoginInfoAsync();
-            //var signInResult = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider,
-            //    info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
 
-            //if (signInResult.Succeeded)
-            //    return LocalRedirect(returnurl);
-
-            //var email = info.Principal.FindFirstValue(ClaimTypes.Email);
-
-            //if (email != null)
-            //{
-            //    var user = await _userManager.FindByEmailAsync(email);
-
-            //    if (user == null)
-            //    {
-            //        user = new User
-            //        {
-            //            UserName = info.Principal.FindFirstValue(ClaimTypes.Email),
-            //            Email = info.Principal.FindFirstValue(ClaimTypes.Email)
-            //        };
-            //        await _userManager.CreateAsync(user);
-
-            //        await _userManager.AddLoginAsync(user, info);
-            //        await _signInManager.SignInAsync(user, isPersistent: false);
-            //        return LocalRedirect(returnurl);
-
-            //    }
-
-            //}
-            //  }
-
-            return Ok(token);
+            var urlBack = "https://localhost:5001/";
+            Response.Redirect(urlBack);
+            return Ok(urlBack);
         }
 
-        private async Task<string> GetUserInfo(string token)
+        private async Task<UserProfile> GetUserInfo(string token)
         {
-            var url=$"https://graph.facebook.com/me?fields={_scope}&access_token={token}";
-            var data = await GetData<string>(url);
+            var url=$"https://graph.facebook.com/me?fields={_userRequestScope}&access_token={token}";
+            var data = await GetData<UserProfile>(url);
             return data;
         }
 
-        private async Task<FbToken> GetToken(string code,string redirectUrl)
+        private string GetCallBackUrl(HttpContext context)
+        {
+            return $"{context.Request.Scheme}://{context.Request.Host}/auth/FBCallback/";
+        }
+
+        private async Task<FBToken> GetToken(string code,string redirectUrl)
         {
             var url = $"https://graph.facebook.com/oauth/access_token?" +
                 $"client_id={_configuration["FaceBookAppId"]}" +
@@ -186,9 +172,7 @@ namespace Authorization.Controllers
                 $"&redirect_uri={redirectUrl}";
 
 
-            var data = await GetData<FbToken>(url);
-
-            Response.Redirect(url);
+            var data = await GetData<FBToken>(url);
             return data;
         }
 
@@ -202,10 +186,39 @@ namespace Authorization.Controllers
             if (!response.IsSuccessStatusCode)
                 return null;
 
-            Response.Redirect(url);
             return JsonConvert.DeserializeObject<TData>(jsonStr);
         }
 
         
     }
 }
+//var info = await _signInManager.GetExternalLoginInfoAsync();
+//var signInResult = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider,
+//    info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
+
+//if (signInResult.Succeeded)
+//    return LocalRedirect(returnurl);
+
+//var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+
+//if (email != null)
+//{
+//    var user = await _userManager.FindByEmailAsync(email);
+
+//    if (user == null)
+//    {
+//        user = new User
+//        {
+//            UserName = info.Principal.FindFirstValue(ClaimTypes.Email),
+//            Email = info.Principal.FindFirstValue(ClaimTypes.Email)
+//        };
+//        await _userManager.CreateAsync(user);
+
+//        await _userManager.AddLoginAsync(user, info);
+//        await _signInManager.SignInAsync(user, isPersistent: false);
+//        return LocalRedirect(returnurl);
+
+//    }
+
+//}
+//  }

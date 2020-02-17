@@ -2,10 +2,13 @@
 
 namespace Authorization.ResponseModels
 {
-    public class FbToken
+    public class FBToken
     {
         [JsonProperty("access_token")]
         public string AccessToken { get; set; }
-        //"token_type":"bearer","expires_in":5168570}
+        [JsonProperty("token_type")]
+        public string TokenType { get; set; }
+        [JsonProperty("expires_in")]
+        public int ExpiresIn { get; set; }
     }
 }
