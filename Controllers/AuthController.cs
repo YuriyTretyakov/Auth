@@ -26,7 +26,7 @@ namespace Authorization.Controllers
         private readonly IConfiguration _configuration;
 
         private readonly string _appscope = "email";
-        private readonly string _userRequestScope = "first_name,last_name,email,picture";
+        private readonly string _userRequestScope = "first_name,last_name,email,picture,birthday,gender";
         private readonly string _display = "iframe";
         //private readonly string _jwtKey = "SOME_RANDOM_KEY_DO_NOT_SHARE";
         //private readonly string _jwtIssuer = "http://yourdomain.com";
@@ -144,16 +144,18 @@ namespace Authorization.Controllers
                 return BadRequest("Unable to retrieve access token");
 
 
-            var userData = await GetUserInfo(token.AccessToken);
+            var userData = await GetFacebookUserInfo(token.AccessToken);
 
-            var urlBack = "https://localhost:5001/";
-            Response.Redirect(urlBack);
-            return Ok(urlBack);
+            if (userData.Email == null)
+                return BadRequest("Unable to retrieve User's email which is required");
+
+            var user=await ProcessFacebookUser(userData);
+            return Ok(user);
         }
 
-        private async Task<UserProfile> GetUserInfo(string token)
+        private async Task<UserProfile> GetFacebookUserInfo(string token)
         {
-            var url=$"https://graph.facebook.com/me?fields={_userRequestScope}&access_token={token}";
+            var url = $"https://graph.facebook.com/me?fields={_userRequestScope}&access_token={token}";
             var data = await GetData<UserProfile>(url);
             return data;
         }
@@ -163,7 +165,7 @@ namespace Authorization.Controllers
             return $"{context.Request.Scheme}://{context.Request.Host}/auth/FBCallback/";
         }
 
-        private async Task<FBToken> GetToken(string code,string redirectUrl)
+        private async Task<FBToken> GetToken(string code, string redirectUrl)
         {
             var url = $"https://graph.facebook.com/oauth/access_token?" +
                 $"client_id={_configuration["FaceBookAppId"]}" +
@@ -176,8 +178,8 @@ namespace Authorization.Controllers
             return data;
         }
 
-        private async Task<TData> GetData<TData>(string url) where TData:class
-            
+        private async Task<TData> GetData<TData>(string url) where TData : class
+
         {
             var client = new HttpClient();
             var response = await client.GetAsync(url);
@@ -189,36 +191,30 @@ namespace Authorization.Controllers
             return JsonConvert.DeserializeObject<TData>(jsonStr);
         }
 
-        
+        private async Task<User> ProcessFacebookUser(UserProfile userProfile)
+        {
+            if (userProfile.Email == null) return null;
+            var user = await _userManager.FindByEmailAsync(userProfile.Email);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    UserName = userProfile.Email,
+                    Email = userProfile.Email,
+                    Name = userProfile.FirstName,
+                    LastName=userProfile.LastName,
+                    EmailConfirmed = true,
+                    UserPicture=userProfile.Picture.Data.Url,
+                    RegisteredOn=DateTime.Now,
+                    ExternalProvider="Facebook",
+                    //ExternalProviderId=userProfile.Id.ToString()
+                };
+                await _userManager.CreateAsync(user);
+            }
+            await _signInManager.SignInAsync(user, isPersistent: false);
+            user.LastLoggedInOn = DateTime.Now;
+            return user;
+        }
     }
 }
-//var info = await _signInManager.GetExternalLoginInfoAsync();
-//var signInResult = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider,
-//    info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
-
-//if (signInResult.Succeeded)
-//    return LocalRedirect(returnurl);
-
-//var email = info.Principal.FindFirstValue(ClaimTypes.Email);
-
-//if (email != null)
-//{
-//    var user = await _userManager.FindByEmailAsync(email);
-
-//    if (user == null)
-//    {
-//        user = new User
-//        {
-//            UserName = info.Principal.FindFirstValue(ClaimTypes.Email),
-//            Email = info.Principal.FindFirstValue(ClaimTypes.Email)
-//        };
-//        await _userManager.CreateAsync(user);
-
-//        await _userManager.AddLoginAsync(user, info);
-//        await _signInManager.SignInAsync(user, isPersistent: false);
-//        return LocalRedirect(returnurl);
-
-//    }
-
-//}
-//  }

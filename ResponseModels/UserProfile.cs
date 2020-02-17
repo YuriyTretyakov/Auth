@@ -23,9 +23,9 @@ namespace Authorization.ResponseModels
     public class UserProfile
     {
         [JsonProperty("first_name")]
-        public string First_name { get; set; }
+        public string FirstName { get; set; }
         [JsonProperty("last_name")]
-        public string Last_name { get; set; }
+        public string LastName { get; set; }
         [JsonProperty("picture")]
         public Picture Picture { get; set; }
         [JsonProperty("id")]
