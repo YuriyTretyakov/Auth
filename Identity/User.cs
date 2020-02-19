@@ -11,6 +11,6 @@ namespace Authorization.Identity
         public DateTime LastLoggedInOn { get; set; }
         public string UserPicture { get; set; }
         public string ExternalProvider { get; set; }
-        public int? ExternalProviderId { get; set; }
+        public string ExternalProviderId { get; set; }
     }
 }

@@ -19,6 +19,7 @@ using Authorization.Middlewares;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.Google;
+using Authorization.ExternalLoginProvider;
 
 namespace Authorization
 {
@@ -50,6 +51,13 @@ namespace Authorization
                     .RequireAuthenticatedUser()
                     .Build();
             });
+
+         //   var fbProvider = new FacebookLoginProvider();
+           // fbProvider.Secret = _config["FaceBookSecret"];
+           // fbProvider.Appid = _config["FaceBookAppId"];
+
+
+            services.AddSingleton<FacebookLoginProvider>();
 
             services.AddAuthentication(options =>
             {
