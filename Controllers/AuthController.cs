@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Authorization.ExternalLoginProvider;
+using Authorization.ExternalLoginProvider.FaceBook;
 using Authorization.Identity;
 using Authorization.ResponseModels;
 using Authorization.ViewModels;
@@ -22,7 +23,7 @@ namespace Authorization.Controllers
         private readonly SignInManager<User> _signInManager;
         private readonly UserManager<User> _userManager;
         private readonly IConfiguration _configuration;
-        private FacebookLoginProvider _faceBookProvider;
+        private readonly FacebookLoginProvider _faceBookProvider;
 
        
 
@@ -78,8 +79,6 @@ namespace Authorization.Controllers
         [HttpGet("SignInFacebook")]
         public void LoginFacebook()
         {
-            _faceBookProvider.Secret = _configuration["FaceBookSecret"];
-            _faceBookProvider.Appid = _configuration["FaceBookAppId"];
             _faceBookProvider.RedirectUrl= $"{Request.Scheme}://{Request.Host}/auth/FBCallback/";
             var loginfaceBookUrl = _faceBookProvider.GetLoginUrl();
             Response.Redirect(loginfaceBookUrl);

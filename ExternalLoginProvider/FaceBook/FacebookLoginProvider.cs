@@ -1,22 +1,31 @@
-﻿using Authorization.ResponseModels;
-using Newtonsoft.Json;
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Threading.Tasks;
+using Authorization.ResponseModels;
+using Newtonsoft.Json;
 
-namespace Authorization.ExternalLoginProvider
+namespace Authorization.ExternalLoginProvider.FaceBook
 {
     public class FacebookLoginProvider
     {
+
         public string AppScope { get; set; }= "email";
         public string UserRequestScope { get; set; } = "first_name,last_name,email,picture,birthday,gender";
         public readonly string DisplayOauthDialog = "iframe";
 
-        public string Appid { get; set; }
-        public string Secret { get; set; }
+        public string Appid { get; private set; }
+        public string Secret { get; private set; }
         public string RedirectUrl { get; set; }
 
         public FBToken Token { private set; get; }
 
+        private FacebookLoginProvider()
+        { }
+
+        public FacebookLoginProvider(string appid, string appsecret)
+        {
+            Appid = appid;
+            Secret = appsecret;
+        }
 
         public async Task<FBToken> GetToken(string code)
         {
