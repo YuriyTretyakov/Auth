@@ -1,21 +1,20 @@
 ﻿using System;
 using System.IdentityModel.Tokens.Jwt;
-using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Authorization.ExternalLoginProvider;
 using Authorization.ExternalLoginProvider.FaceBook;
 using Authorization.ExternalLoginProvider.Google;
-using Authorization.ExternalLoginProvider.Google.ResponseModels;
 using Authorization.Identity;
 using Authorization.ViewModels;
+using Authorization.ViewModels.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
+using User = Authorization.Identity.User;
 
 namespace Authorization.Controllers
 {
@@ -27,11 +26,6 @@ namespace Authorization.Controllers
         private readonly IConfiguration _configuration;
         private readonly FacebookLoginProvider _faceBookProvider;
         private readonly GoogleLoginProvider _googleProvider;
-
-
-        //private readonly string _jwtKey = "SOME_RANDOM_KEY_DO_NOT_SHARE";
-        //private readonly string _jwtIssuer = "http://yourdomain.com";
-        //private readonly int _jwtExpireDays = 30;
 
 
         public AuthController(SignInManager<User> signInManager,
@@ -61,9 +55,7 @@ namespace Authorization.Controllers
                     var user = await _userManager.FindByEmailAsync(loginModel.Email);
                     return GenerateJwtToken(user);
                 }
-
             }
-
             return BadRequest();
         }
 
@@ -73,14 +65,6 @@ namespace Authorization.Controllers
         {
             _googleProvider.RedirectUrl= $"{Request.Scheme}://{Request.Host}/auth/GoogleCallBack/";
             var redirectUrl = _googleProvider.GetLoginUrl();
-
-
-            //var redirectUrl = $"https://accounts.google.com/o/oauth2/auth?" +
-            //                  $"redirect_uri=https://localhost:5001/Auth/GoogleCallBack/" +
-            //                  $"&response_type=code&client_id={_configuration["ClientId"]}" +
-            //                  $"&scope=https://www.googleapis.com/auth/userinfo.email+https://www.googleapis.com/auth/userinfo.profile" +
-            //                  $"&approval_prompt=force&access_type=offline";
-
             Response.Redirect(redirectUrl);
         }
 
@@ -93,48 +77,15 @@ namespace Authorization.Controllers
                 return BadRequest("Unable to retrieve verification code");
 
             var token = await _googleProvider.GetToken(code);
-
             var userInfo = await _googleProvider.GetUserProfile(token.AccessToken);
+            var identitUser = await ProcessExternalUser(userInfo, "Google");
 
-            return Ok(userInfo);
-
-            //var accessReqBody = new RequestToken
-            //{
-            //    ClientId = _configuration["ClientId"],
-            //    ClientSecret = _configuration["ClientSecret"],
-            //    Code = code,
-            //    RedirectUri = "https://localhost:5001/Auth/GoogleCallBack/",
-            //    GrantType = "authorization_code"
-            //};
-
-            //HttpResponseMessage tokenResponse;
-
-            //using (var client = new HttpClient())
-            //{
-            //    client.BaseAddress = new Uri("https://oauth2.googleapis.com");
-            //    tokenResponse = await client.PostAsJsonAsync("token", accessReqBody);
-            //}
-
-            //var tokenRespString = await tokenResponse.Content.ReadAsStringAsync();
-            //var token = JsonConvert.DeserializeObject<Token>(tokenRespString);
-
-            //if (token == null)
-            //    return BadRequest("Unable to retrieve access token");
-
-            //HttpResponseMessage userInfoResponse;
-
-            //using (var client = new HttpClient())
-            //{
-            //    client.BaseAddress = new Uri("https://www.googleapis.com/oauth2/v1/");
-            //    client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"Bearer {token.AccessToken}");
-            //    userInfoResponse= await client.GetAsync("userinfo?alt=json");
-            //}
-
-            //var userInfoStr = await userInfoResponse.Content.ReadAsStringAsync();
-
-            //var userInfo= JsonConvert.DeserializeObject<UserProfile>(userInfoStr);
-
-            return Ok(userInfo);
+            var user = new ViewModels.Auth.User
+            {
+                Id = identitUser.Id,
+                Token = GenerateJwtToken(identitUser)
+            };
+            return Ok(user);
         }
 
         [AllowAnonymous]
@@ -166,13 +117,19 @@ namespace Authorization.Controllers
             if (userData?.Email == null)
                 return BadRequest("Unable to retrieve User's email which is required");
 
-            var user = await ProcessExternalUser(userData,"FaceBook");
+            var identitUser = await ProcessExternalUser(userData,"FaceBook");
+
+            var user = new ViewModels.Auth.User
+            {
+                Id = identitUser.Id,
+                Token = GenerateJwtToken(identitUser)
+            };
+
             return Ok(user);
         }
 
         private async Task<User> ProcessExternalUser(IGenericUserExternalData userProfile,string externalProvider)
         {
-            if (userProfile.Email == null) return null;
             var user = await _userManager.FindByEmailAsync(userProfile.Email);
 
             if (user == null)
