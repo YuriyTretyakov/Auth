@@ -1,10 +1,13 @@
 ﻿using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Authorization.ExternalLoginProvider;
 using Authorization.ExternalLoginProvider.FaceBook;
+using Authorization.ExternalLoginProvider.Google.ResponseModels;
 using Authorization.Identity;
 using Authorization.ResponseModels;
 using Authorization.ViewModels;
@@ -14,6 +17,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
 
 namespace Authorization.Controllers
 {
@@ -66,14 +70,44 @@ namespace Authorization.Controllers
         public void LoginWithGoogle()
         {
             var redirectUrl = $"https://accounts.google.com/o/oauth2/auth?" +
-                              $"redirect_uri=https://localhost:5001/signin-google&" +
-                              $"response_type=code&client_id={_configuration["ClientId"]}&" +
-                              $"scope=https://www.googleapis.com/auth/userinfo.email+https://www.googleapis.com/auth/userinfo.profile&" +
-                              $"approval_prompt=force&access_type=offline";
+                              $"redirect_uri=https://localhost:5001/Auth/GoogleCallBack/" +
+                              $"&response_type=code&client_id={_configuration["ClientId"]}" +
+                              $"&scope=https://www.googleapis.com/auth/userinfo.email+https://www.googleapis.com/auth/userinfo.profile" +
+                              $"&approval_prompt=force&access_type=offline";
 
             Response.Redirect(redirectUrl);
         }
 
+
+        [AllowAnonymous]
+        [HttpGet("GoogleCallBack")]
+        public async Task<IActionResult> GoogleCallBack(string code = null)
+        {
+            var accessReqBody = new RequestToken
+            {
+                ClientId = _configuration["ClientId"],
+                ClientSecret = _configuration["ClientSecret"],
+                Code = code,
+                RedirectUri = "https://localhost:5001/Auth/GoogleCallBack/",
+                GrantType = "authorization_code"
+            };
+
+            HttpResponseMessage tokenResponse;
+
+            using (var client = new HttpClient())
+            {
+                client.BaseAddress = new Uri("https://oauth2.googleapis.com");
+                tokenResponse = await client.PostAsJsonAsync<RequestToken>("token", accessReqBody);
+            }
+            if (tokenResponse == null)
+                return BadRequest("Unable to retriev");
+
+            var tokenRespString = await tokenResponse.Content.ReadAsStringAsync();
+            var token = JsonConvert.DeserializeObject<Token>(tokenRespString);
+
+
+            return Ok();
+        }
 
         [AllowAnonymous]
         [HttpGet("SignInFacebook")]

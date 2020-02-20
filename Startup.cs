@@ -64,7 +64,6 @@ namespace Authorization
             }).AddCookie((options => { options.Cookie.IsEssential = true; }))
                 .AddGoogle(google=>
             {
-                google.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                 google.ClientId = Configuration["ClientId"];
                 google.ClientSecret = Configuration["ClientSecret"];
                
