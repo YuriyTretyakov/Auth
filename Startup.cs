@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Authorization.ExternalLoginProvider;
 using Authorization.ExternalLoginProvider.FaceBook;
+using Authorization.ExternalLoginProvider.Google;
 
 namespace Authorization
 {
@@ -51,6 +52,7 @@ namespace Authorization
             });
 
             services.AddSingleton<FacebookLoginProvider>(new FacebookLoginProvider(_config["FaceBookAppId"], _config["FaceBookSecret"]));
+            services.AddSingleton<GoogleLoginProvider>(new GoogleLoginProvider(_config["ClientId"],_config["ClientSecret"]));
 
             services.AddAuthentication(options =>
             {
@@ -62,13 +64,6 @@ namespace Authorization
                 
 
             }).AddCookie((options => { options.Cookie.IsEssential = true; }))
-                .AddGoogle(google=>
-            {
-                google.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                google.ClientId = Configuration["ClientId"];
-                google.ClientSecret = Configuration["ClientSecret"];
-               
-            })
             .AddJwtBearer(cfg =>
             {
                

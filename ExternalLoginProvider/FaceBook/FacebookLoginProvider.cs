@@ -1,6 +1,6 @@
 ﻿using System.Net.Http;
 using System.Threading.Tasks;
-using Authorization.ResponseModels;
+using Authorization.ExternalLoginProvider.FaceBook.ResponseModels;
 using Newtonsoft.Json;
 
 namespace Authorization.ExternalLoginProvider.FaceBook
@@ -47,8 +47,12 @@ namespace Authorization.ExternalLoginProvider.FaceBook
 
         private async Task<TData> GetData<TData>(string url) where TData : class
         {
-            var client = new HttpClient();
-            var response = await client.GetAsync(url);
+            HttpResponseMessage response;
+
+            using (var client = new HttpClient())
+            {
+                 response = await client.GetAsync(url);
+            }
             var jsonStr = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
