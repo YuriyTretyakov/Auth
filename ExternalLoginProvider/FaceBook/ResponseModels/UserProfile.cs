@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Authorization.ResponseModels
+namespace Authorization.ExternalLoginProvider.FaceBook.ResponseModels
 {
     public class Data
     {
@@ -20,19 +20,23 @@ namespace Authorization.ResponseModels
         public Data Data { get; set; }
     }
 
-    public class UserProfile
+    public class UserProfile:IGenericUserExternalData
     {
         [JsonProperty("first_name")]
         public string FirstName { get; set; }
         [JsonProperty("last_name")]
         public string LastName { get; set; }
+        [JsonProperty("email")]
+        public string Email { get; set; }
         [JsonProperty("picture")]
         public Picture Picture { get; set; }
         [JsonProperty("id")]
         public string Id { get; set; }
-        [JsonProperty("email")]
-        public string Email { get; set; }
-        
+
+        public string UserName => Email;
+        public string Name => FirstName;
+        public string UserPicture => Picture?.Data.Url;
+        public string ExternalProviderId => Id;
     }
 }
 

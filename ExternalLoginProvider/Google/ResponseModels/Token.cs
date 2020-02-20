@@ -12,5 +12,9 @@ namespace Authorization.ExternalLoginProvider.Google.ResponseModels
         public string Scope { get; set; }
         [JsonProperty("token_type")]
         public string TokenType { get; set; }
+        [JsonProperty("id_token")]
+        public string IdToken { get; set; }
+        [JsonProperty("refresh_token")]
+        public string RefreshToken { get; set; }
     }
 }
