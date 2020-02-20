@@ -1,0 +1,9 @@
+diff a/appsettings.json b/appsettings.json	(rejected hunks)
+@@ -2,6 +2,7 @@
+   "ConnectionStrings": {
+ 
+ 
++    "AuthDbConnection": "Server=(localdb)\\MSSQLLocalDB;Database=CashDataKeeper;Trusted_Connection=true;MultipleActiveResultSets=True;"
+ 
+   },
+   "JwtIssuer": "http://someservice.com",

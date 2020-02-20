@@ -1,4 +1,4 @@
-﻿    
+﻿
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -13,12 +13,11 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json.Serialization;
 using Microsoft.AspNetCore.Identity;
 using Swashbuckle.AspNetCore.Swagger;
-using Microsoft.AspNetCore.Authentication;
-using System.Security.Claims;
 using Authorization.Middlewares;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.Google;
+using Authorization.ExternalLoginProvider;
+using Authorization.ExternalLoginProvider.FaceBook;
 
 namespace Authorization
 {
@@ -51,6 +50,8 @@ namespace Authorization
                     .Build();
             });
 
+            services.AddSingleton<FacebookLoginProvider>(new FacebookLoginProvider(_config["FaceBookAppId"], _config["FaceBookSecret"]));
+
             services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -60,28 +61,13 @@ namespace Authorization
                 options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
                 
 
-            }).AddFacebook(facebookOptions =>
-                {
-                    facebookOptions.AppId = Configuration["FaceBookAppId"];
-                    facebookOptions.AppSecret = Configuration["FaceBookSecret"];
-                })
-                .AddCookie((options => { options.Cookie.IsEssential = true; }))
+            }).AddCookie((options => { options.Cookie.IsEssential = true; }))
                 .AddGoogle(google=>
             {
                 google.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                 google.ClientId = Configuration["ClientId"];
                 google.ClientSecret = Configuration["ClientSecret"];
-               // google.CallbackPath = "/signin-google";
-                //google.UserInformationEndpoint = "https://www.googleapis.com/oauth2/v2/userinfo";
-                //google.ClaimActions.Clear();
-                //google.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "id");
-                //google.ClaimActions.MapJsonKey(ClaimTypes.Name, "name");
-                //google.ClaimActions.MapJsonKey(ClaimTypes.GivenName, "given_name");
-                //google.ClaimActions.MapJsonKey(ClaimTypes.Surname, "family_name");
-                //google.ClaimActions.MapJsonKey("urn:google:profile", "link");
-                //google.ClaimActions.MapJsonKey(ClaimTypes.Email, "email");
-                //google.ClaimActions.MapJsonKey("urn:google:image", "picture");
-                ////google.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "sub");
+               
             })
             .AddJwtBearer(cfg =>
             {
@@ -120,8 +106,6 @@ namespace Authorization
                     });
             }
             );
-
-
 
             services.AddSingleton<IConfiguration>(_config);
             services.AddDbContext<AuthDbContext>();

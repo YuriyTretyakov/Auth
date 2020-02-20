@@ -1,12 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using Authorization.ExternalLoginProvider;
+using Authorization.ExternalLoginProvider.FaceBook;
 using Authorization.Identity;
+using Authorization.ResponseModels;
 using Authorization.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -20,19 +23,24 @@ namespace Authorization.Controllers
         private readonly SignInManager<User> _signInManager;
         private readonly UserManager<User> _userManager;
         private readonly IConfiguration _configuration;
+        private readonly FacebookLoginProvider _faceBookProvider;
 
+       
 
         //private readonly string _jwtKey = "SOME_RANDOM_KEY_DO_NOT_SHARE";
         //private readonly string _jwtIssuer = "http://yourdomain.com";
         //private readonly int _jwtExpireDays = 30;
 
 
-        public AuthController(SignInManager<User> signInManager, UserManager<User> userManager,
-            IConfiguration configuration)
+        public AuthController(SignInManager<User> signInManager,
+                              UserManager<User> userManager,
+                              IConfiguration configuration,
+                              FacebookLoginProvider faceBookProvider)
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _configuration = configuration;
+            _faceBookProvider = faceBookProvider;
         }
 
         [HttpPost("Login")]
@@ -67,34 +75,71 @@ namespace Authorization.Controllers
         }
 
 
-      
-        private IActionResult Externallogin(string provider, string returnUrl)
-        {
-            var redirectUrl = Url.Action("FBCallback", "Auth", new {ReturnUrl = returnUrl});
-            var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
-            return new ChallengeResult(provider, properties);
-        }
-
-      
+        [AllowAnonymous]
         [HttpGet("SignInFacebook")]
         public void LoginFacebook()
         {
-            var loginfaceBookUrl =$"https://www.facebook.com/v6.0/dialog/oauth?" +
-                                  $"client_id={_configuration["FaceBookAppId"]}" +
-                                  $"&client_secret={_configuration["FaceBookSecret"]}" +
-                                  $"&redirect_uri=https://localhost:5001/auth/FBCallback" +
-                                  $"&scope=email";
+            _faceBookProvider.RedirectUrl= $"{Request.Scheme}://{Request.Host}/auth/FBCallback/";
+            var loginfaceBookUrl = _faceBookProvider.GetLoginUrl();
             Response.Redirect(loginfaceBookUrl);
-          //  Externallogin("Facebook", "FBCallback");
         }
 
+        [AllowAnonymous]
+        [HttpGet("FBCallback")]
+        public async Task<IActionResult> ExternalLoginCallback(string error_code = null, string error_message = null, string code = null)
+        {
+            if (error_code != null)
+                return BadRequest(error_message);
+
+            if (code == null)
+                return BadRequest("Unable to retrieve verification code");
+
+            await _faceBookProvider.RequestToken(code);
+
+            if (_faceBookProvider.Token == null)
+                return BadRequest("Unable to retrieve access token");
+
+            var userData = await _faceBookProvider.GetFacebookUserInfo();
+
+            if (userData?.Email == null)
+                return BadRequest("Unable to retrieve User's email which is required");
+
+            var user = await ProcessFacebookUser(userData);
+            return Ok(user);
+        }
+
+        private async Task<User> ProcessFacebookUser(UserProfile userProfile)
+        {
+            if (userProfile.Email == null) return null;
+            var user = await _userManager.FindByEmailAsync(userProfile.Email);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    UserName = userProfile.Email,
+                    Email = userProfile.Email,
+                    Name = userProfile.FirstName,
+                    LastName = userProfile.LastName,
+                    EmailConfirmed = true,
+                    UserPicture = userProfile.Picture.Data.Url,
+                    RegisteredOn = DateTime.Now,
+                    ExternalProvider = "Facebook",
+                    ExternalProviderId=userProfile.Id.ToString()
+                };
+                await _userManager.CreateAsync(user);
+            }
+            await _signInManager.SignInAsync(user, isPersistent: false);
+            user.LastLoggedInOn = DateTime.Now;
+            return user;
+        }
 
         private string GenerateJwtToken(string email, IdentityUser user)
         {
             var identity = new ClaimsIdentity(
 
                 new System.Security.Principal.GenericIdentity(user.Email, "Token"),
-                new[] {new Claim("ID", user.Id.ToString())}
+                new[] { new Claim("ID", user.Id.ToString()) }
             );
 
             var key = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["JwtKey"]));
@@ -115,45 +160,5 @@ namespace Authorization.Controllers
             return tokenHandler.WriteToken(token);
         }
 
-        [AllowAnonymous]
-        [HttpGet("FBCallback")]
-        public async Task<IActionResult> ExternalLoginCallback(string returnurl = null, string remoteError = null)
-        {
-            returnurl = returnurl ?? Url.Content("~/");
-         //   if (remoteError != null)
-         //   {
-                var info = await _signInManager.GetExternalLoginInfoAsync();
-                var signInResult = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider,
-                    info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
-
-                if (signInResult.Succeeded)
-                    return LocalRedirect(returnurl);
-
-                var email = info.Principal.FindFirstValue(ClaimTypes.Email);
-
-                if (email != null)
-                {
-                    var user = await _userManager.FindByEmailAsync(email);
-
-                    if (user == null)
-                    {
-                        user = new User
-                        {
-                            UserName = info.Principal.FindFirstValue(ClaimTypes.Email),
-                            Email = info.Principal.FindFirstValue(ClaimTypes.Email)
-                        };
-                        await _userManager.CreateAsync(user);
-
-                        await _userManager.AddLoginAsync(user, info);
-                        await _signInManager.SignInAsync(user, isPersistent: false);
-                        return LocalRedirect(returnurl);
-
-                    }
-
-                }
-          //  }
-
-            return null;
-        }
     }
 }
