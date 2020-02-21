@@ -53,7 +53,7 @@ namespace Authorization
 
             services.AddSingleton<FacebookLoginProvider>(new FacebookLoginProvider(_config["FaceBookAppId"], _config["FaceBookSecret"]));
             services.AddSingleton<GoogleLoginProvider>(new GoogleLoginProvider(_config["ClientId"],_config["ClientSecret"]));
-
+            services.AddSingleton<RefreshTokenStorage>(new RefreshTokenStorage());
             services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
