@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using Authorization.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -16,7 +17,6 @@ using Swashbuckle.AspNetCore.Swagger;
 using Authorization.Middlewares;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
-using Authorization.ExternalLoginProvider;
 using Authorization.ExternalLoginProvider.FaceBook;
 using Authorization.ExternalLoginProvider.Google;
 
@@ -79,6 +79,18 @@ namespace Authorization
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(Configuration["JwtKey"])),
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero,
+                };
+                cfg.Events = new JwtBearerEvents
+                {
+                    OnAuthenticationFailed = context =>
+                    {
+                        if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+                        {
+                            context.Response.Headers.Add("Token-Expired", "true");
+                        }
+
+                        return Task.CompletedTask;
+                    }
                 };
 
             });
