@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -8,12 +9,12 @@ using Authorization.ExternalLoginProvider;
 using Authorization.ExternalLoginProvider.FaceBook;
 using Authorization.ExternalLoginProvider.Google;
 using Authorization.Identity;
-using Authorization.ViewModels;
 using Authorization.ViewModels.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using User = Authorization.Identity.User;
 
@@ -27,7 +28,7 @@ namespace Authorization.Controllers
         private readonly IConfiguration _configuration;
         private readonly FacebookLoginProvider _faceBookProvider;
         private readonly GoogleLoginProvider _googleProvider;
-        private readonly RefreshTokenStorage _refreshTokenStorage;
+        private readonly TokenStorage _tokenStorage;
 
 
         public AuthController(SignInManager<User> signInManager,
@@ -35,7 +36,7 @@ namespace Authorization.Controllers
             IConfiguration configuration,
             FacebookLoginProvider faceBookProvider,
             GoogleLoginProvider googleProvider,
-            RefreshTokenStorage refreshTokenStorage
+            TokenStorage tokenStorage
         )
         {
             _signInManager = signInManager;
@@ -43,7 +44,7 @@ namespace Authorization.Controllers
             _configuration = configuration;
             _faceBookProvider = faceBookProvider;
             _googleProvider = googleProvider;
-            _refreshTokenStorage = refreshTokenStorage;
+            _tokenStorage = tokenStorage;
         }
 
         [HttpPost("Login")]
@@ -56,13 +57,10 @@ namespace Authorization.Controllers
 
                 if (signInResult.Succeeded)
                 {
-                    var user = await _userManager.FindByEmailAsync(loginModel.Email);
-
-                    return Ok(new
-                    {
-                        Token = GenerateJwtToken(user),
-                        RefreshToken = GenerateRefreshToken()
-                    });
+                    var identityUser = await _userManager.FindByEmailAsync(loginModel.Email);
+                    var userToken = GenerateJwtToken(identityUser);
+                    _tokenStorage.AddToken(identityUser.Email, userToken);
+                    return Ok(new { Token = userToken, Id = identityUser.Id });
                 }
             }
 
@@ -88,14 +86,10 @@ namespace Authorization.Controllers
 
             var token = await _googleProvider.GetToken(code);
             var userInfo = await _googleProvider.GetUserProfile(token.AccessToken);
-
             var identityUser = await ProcessExternalUser(userInfo, "Google");
-
-            return Ok(new
-            {
-                Token = GenerateJwtToken(identityUser),
-                RefreshToken = GenerateRefreshToken()
-            });
+            var userToken = GenerateJwtToken(identityUser);
+            _tokenStorage.AddToken(identityUser.Email, userToken);
+            return Ok(new { Token = userToken, Id = identityUser.Id });
         }
 
         [AllowAnonymous]
@@ -129,34 +123,33 @@ namespace Authorization.Controllers
                 return BadRequest("Unable to retrieve User's email which is required");
 
             var identityUser = await ProcessExternalUser(userData, "FaceBook");
-
-            return Ok(new
-            {
-                Token = GenerateJwtToken(identityUser),
-                RefreshToken = GenerateRefreshToken()
-            });
+            var userToken = GenerateJwtToken(identityUser);
+            _tokenStorage.AddToken(identityUser.Email, userToken);
+            return Ok(new { Token = userToken, Id = identityUser.Id });
         }
 
         [AllowAnonymous]
         [HttpPost("RefreshToken")]
-        public async Task<IActionResult> RefreshToken(string token, string refreshToken)
+        public async Task<IActionResult> RefreshToken()
         {
+            StringValues token="";
+            if (!Request.Headers.TryGetValue("Authorization", out token))
+                return null;
+
+            token = token.FirstOrDefault().Replace("bearer ", "", StringComparison.InvariantCultureIgnoreCase);
             var principal = GetPrincipalFromExpiredToken(token);
             var username = principal.Identity.Name;
 
-            var isValidRefreshToken = _refreshTokenStorage.IsValidRefreshToken(username, refreshToken);
+            var isValidToken = _tokenStorage.IsValidToken(username, token);
 
-            if (!isValidRefreshToken)
-                throw new SecurityTokenException("Invalid refresh token");
+            if (!isValidToken)
+                throw new SecurityTokenException("Invalid  token");
 
             var user = await _userManager.FindByEmailAsync(username);
-
             var newJwtToken = GenerateJwtToken(user);
-            var newRefreshToken = GenerateRefreshToken();
-
-            _refreshTokenStorage.RemoveRefreshToken(username, refreshToken);
-            _refreshTokenStorage.AddRefreshToken(username, newRefreshToken);
-            return Ok(new { token = newJwtToken, refreshToken = newRefreshToken });
+            _tokenStorage.RemoveToken(username, token);
+            _tokenStorage.AddToken(username, newJwtToken);
+            return Ok(new { Token = newJwtToken });
         }
 
         private async Task<User> ProcessExternalUser(IGenericUserExternalData userProfile, string externalProvider)
@@ -188,7 +181,6 @@ namespace Authorization.Controllers
         private string GenerateJwtToken(IdentityUser user)
         {
             var identity = new ClaimsIdentity(
-
                 new System.Security.Principal.GenericIdentity(user.Email, "Token"),
                 new[] {new Claim("ID", user.Id.ToString())}
             );
@@ -202,7 +194,7 @@ namespace Authorization.Controllers
             var token = tokenHandler.CreateToken(new SecurityTokenDescriptor
             {
                 Issuer = _configuration["JwtIssuer"],
-                Audience = _configuration["JwtIssuer"],
+                Audience = _configuration["JwtAudince"],
                 SigningCredentials = creds,
                 Expires = expires,
                 Subject = identity
@@ -225,11 +217,13 @@ namespace Authorization.Controllers
         {
             var tokenValidationParameters = new TokenValidationParameters
             {
-                ValidateAudience = false, //you might want to validate the audience and issuer depending on your use case
-                ValidateIssuer = false,
+                ValidateAudience = true,
+                ValidateIssuer = true,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("the server key used to sign the JWT token is here, use more than 16 chars")),
-                ValidateLifetime = false //here we are saying that we don't care about the token's expiration date
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["JwtKey"])),
+                ValidAudience = _configuration["JwtAudince"],
+                ValidIssuer = _configuration["JwtIssuer"],
+                ValidateLifetime = false
             };
 
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -241,7 +235,5 @@ namespace Authorization.Controllers
 
             return principal;
         }
-
-
     }
 }

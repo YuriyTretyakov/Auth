@@ -51,9 +51,9 @@ namespace Authorization
                     .Build();
             });
 
-            services.AddSingleton<FacebookLoginProvider>(new FacebookLoginProvider(_config["FaceBookAppId"], _config["FaceBookSecret"]));
-            services.AddSingleton<GoogleLoginProvider>(new GoogleLoginProvider(_config["ClientId"],_config["ClientSecret"]));
-            services.AddSingleton<RefreshTokenStorage>(new RefreshTokenStorage());
+            services.AddSingleton(new FacebookLoginProvider(_config["FaceBookAppId"], _config["FaceBookSecret"]));
+            services.AddSingleton(new GoogleLoginProvider(_config["ClientId"],_config["ClientSecret"]));
+            services.AddSingleton(new TokenStorage());
             services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -75,7 +75,7 @@ namespace Authorization
                     ValidateIssuer = true,
                     ValidateAudience = true,
                     ValidIssuer = Configuration["JwtIssuer"],
-                    ValidAudience = Configuration["JwtIssuer"],
+                    ValidAudience = Configuration["JwtAudince"],
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(Configuration["JwtKey"])),
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero,
