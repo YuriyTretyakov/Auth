@@ -84,8 +84,18 @@ namespace Authorization.Controllers
             if (code == null)
                 return BadRequest("Unable to retrieve verification code");
 
+            _googleProvider.RedirectUrl = $"{Request.Scheme}://{Request.Host}/auth/GoogleCallBack/";
+
             var token = await _googleProvider.GetToken(code);
+
+            if (token==null)
+                return BadRequest("Unable to retrieve user token by verification code");
+
             var userInfo = await _googleProvider.GetUserProfile(token.AccessToken);
+
+            if (userInfo == null)
+                return BadRequest("Unable to retrieve user info by token provided");
+
             var identityUser = await ProcessExternalUser(userInfo, "Google");
             var userToken = GenerateJwtToken(identityUser);
             _tokenStorage.AddToken(identityUser.Email, userToken);
@@ -112,6 +122,7 @@ namespace Authorization.Controllers
             if (code == null)
                 return BadRequest("Unable to retrieve verification code");
 
+            _faceBookProvider.RedirectUrl = $"{Request.Scheme}://{Request.Host}/auth/FBCallback/";
             await _faceBookProvider.RequestToken(code);
 
             if (_faceBookProvider.Token == null)
