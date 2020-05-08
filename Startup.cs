@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using Authorization.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -16,9 +17,9 @@ using Swashbuckle.AspNetCore.Swagger;
 using Authorization.Middlewares;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
-using Authorization.ExternalLoginProvider;
 using Authorization.ExternalLoginProvider.FaceBook;
 using Authorization.ExternalLoginProvider.Google;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 
 namespace Authorization
 {
@@ -51,9 +52,9 @@ namespace Authorization
                     .Build();
             });
 
-            services.AddSingleton<FacebookLoginProvider>(new FacebookLoginProvider(_config["FaceBookAppId"], _config["FaceBookSecret"]));
-            services.AddSingleton<GoogleLoginProvider>(new GoogleLoginProvider(_config["ClientId"],_config["ClientSecret"]));
-
+            services.AddSingleton(new FacebookLoginProvider(_config["FaceBookAppId"], _config["FaceBookSecret"]));
+            services.AddSingleton(new GoogleLoginProvider(_config["ClientId"],_config["ClientSecret"]));
+            services.AddSingleton(new TokenStorage());
             services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -75,12 +76,32 @@ namespace Authorization
                     ValidateIssuer = true,
                     ValidateAudience = true,
                     ValidIssuer = Configuration["JwtIssuer"],
-                    ValidAudience = Configuration["JwtIssuer"],
+                    ValidAudience = Configuration["JwtAudince"],
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(Configuration["JwtKey"])),
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero,
                 };
+                cfg.Events = new JwtBearerEvents
+                {
+                    OnAuthenticationFailed = context =>
+                    {
+                        if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+                        {
+                            context.Response.Headers.Add("Token-Expired", "true");
+                        }
 
+                        return Task.CompletedTask;
+                    }
+                };
+
+            });
+            services.AddCors(options =>
+            {
+                options.AddPolicy("CorsPolicy",
+                    builder => builder.AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials());
             });
 
             services.AddMvc()
@@ -105,6 +126,7 @@ namespace Authorization
             services.AddSingleton<IConfiguration>(_config);
             services.AddDbContext<AuthDbContext>();
             services.AddTransient<AuthDataSeeder>();
+            
 
             services.AddIdentity<User, IdentityRole>(config =>
             {
@@ -121,6 +143,8 @@ namespace Authorization
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, AuthDataSeeder seedData)
         {
+            app.UseCors("CorsPolicy");
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -133,7 +157,7 @@ namespace Authorization
             app.UseAuthentication();
 
 
-          
+            
 
             app.UseMiddleware<Middleware>();
             app.UseSwagger();

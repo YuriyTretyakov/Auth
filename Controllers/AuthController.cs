@@ -1,18 +1,20 @@
 ﻿using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Authorization.ExternalLoginProvider;
 using Authorization.ExternalLoginProvider.FaceBook;
 using Authorization.ExternalLoginProvider.Google;
 using Authorization.Identity;
-using Authorization.ViewModels;
 using Authorization.ViewModels.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using User = Authorization.Identity.User;
 
@@ -26,20 +28,23 @@ namespace Authorization.Controllers
         private readonly IConfiguration _configuration;
         private readonly FacebookLoginProvider _faceBookProvider;
         private readonly GoogleLoginProvider _googleProvider;
+        private readonly TokenStorage _tokenStorage;
 
 
         public AuthController(SignInManager<User> signInManager,
-                              UserManager<User> userManager,
-                              IConfiguration configuration,
-                              FacebookLoginProvider faceBookProvider,
-                              GoogleLoginProvider googleProvider
-                              )
+            UserManager<User> userManager,
+            IConfiguration configuration,
+            FacebookLoginProvider faceBookProvider,
+            GoogleLoginProvider googleProvider,
+            TokenStorage tokenStorage
+        )
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _configuration = configuration;
             _faceBookProvider = faceBookProvider;
             _googleProvider = googleProvider;
+            _tokenStorage = tokenStorage;
         }
 
         [HttpPost("Login")]
@@ -52,18 +57,20 @@ namespace Authorization.Controllers
 
                 if (signInResult.Succeeded)
                 {
-                    var user = await _userManager.FindByEmailAsync(loginModel.Email);
-                    return GenerateJwtToken(user);
+                    var identityUser = await _userManager.FindByEmailAsync(loginModel.Email);
+                    var tokenContainer = GetTokenContainer(identityUser);
+                    return Ok(tokenContainer);
                 }
             }
-            return BadRequest();
+
+            return BadRequest("Invalid user data provided");
         }
 
         [AllowAnonymous]
         [HttpGet("LoginWithGoogle")]
         public void LoginWithGoogle()
         {
-            _googleProvider.RedirectUrl= $"{Request.Scheme}://{Request.Host}/auth/GoogleCallBack/";
+            _googleProvider.RedirectUrl = $"{Request.Scheme}://{Request.Host}/auth/GoogleCallBack/";
             var redirectUrl = _googleProvider.GetLoginUrl();
             Response.Redirect(redirectUrl);
         }
@@ -76,30 +83,39 @@ namespace Authorization.Controllers
             if (code == null)
                 return BadRequest("Unable to retrieve verification code");
 
-            var token = await _googleProvider.GetToken(code);
-            var userInfo = await _googleProvider.GetUserProfile(token.AccessToken);
-            var identitUser = await ProcessExternalUser(userInfo, "Google");
+            _googleProvider.RedirectUrl = $"{Request.Scheme}://{Request.Host}/auth/GoogleCallBack/";
 
-            var user = new ViewModels.Auth.User
-            {
-                Id = identitUser.Id,
-                Token = GenerateJwtToken(identitUser)
-            };
-            return Ok(user);
+            var token = await _googleProvider.GetToken(code);
+
+            if (token==null)
+                return BadRequest("Unable to retrieve user token by verification code");
+
+            var userInfo = await _googleProvider.GetUserProfile(token.AccessToken);
+
+            if (userInfo == null)
+                return BadRequest("Unable to retrieve user info by token provided");
+
+            var identityUser = await ProcessExternalUser(userInfo, "Google");
+            var tokenContainer = GetTokenContainer(identityUser);
+            return Ok(tokenContainer);
+            //var userToken = GenerateJwtToken(identityUser);
+            //_tokenStorage.AddToken(identityUser.Email, userToken);
+            //return Ok(new { Token = userToken, Id = identityUser.Id });
         }
 
         [AllowAnonymous]
         [HttpGet("SignInFacebook")]
         public void LoginFacebook()
         {
-            _faceBookProvider.RedirectUrl= $"{Request.Scheme}://{Request.Host}/auth/FBCallback/";
+            _faceBookProvider.RedirectUrl = $"{Request.Scheme}://{Request.Host}/auth/FBCallback/";
             var loginfaceBookUrl = _faceBookProvider.GetLoginUrl();
             Response.Redirect(loginfaceBookUrl);
         }
 
         [AllowAnonymous]
         [HttpGet("FBCallback")]
-        public async Task<IActionResult> ExternalLoginCallback(string error_code = null, string error_message = null, string code = null)
+        public async Task<IActionResult> ExternalLoginCallback(string error_code = null, string error_message = null,
+            string code = null)
         {
             if (error_code != null)
                 return BadRequest(error_message);
@@ -107,6 +123,7 @@ namespace Authorization.Controllers
             if (code == null)
                 return BadRequest("Unable to retrieve verification code");
 
+            _faceBookProvider.RedirectUrl = $"{Request.Scheme}://{Request.Host}/auth/FBCallback/";
             await _faceBookProvider.RequestToken(code);
 
             if (_faceBookProvider.Token == null)
@@ -117,18 +134,41 @@ namespace Authorization.Controllers
             if (userData?.Email == null)
                 return BadRequest("Unable to retrieve User's email which is required");
 
-            var identitUser = await ProcessExternalUser(userData,"FaceBook");
+            var identityUser = await ProcessExternalUser(userData, "FaceBook");
 
-            var user = new ViewModels.Auth.User
-            {
-                Id = identitUser.Id,
-                Token = GenerateJwtToken(identitUser)
-            };
+            var tokenContainer = GetTokenContainer(identityUser);
 
-            return Ok(user);
+            //var userToken = GenerateJwtToken(identityUser);
+            //_tokenStorage.AddToken(identityUser.Email, userToken);
+            return Ok(tokenContainer);
         }
 
-        private async Task<User> ProcessExternalUser(IGenericUserExternalData userProfile,string externalProvider)
+        [AllowAnonymous]
+        [HttpPost("RefreshToken")]
+        public async Task<IActionResult> RefreshToken(string refreshToken)
+        {
+            StringValues token="";
+            if (!Request.Headers.TryGetValue("Authorization", out token))
+                return null;
+
+            token = token.FirstOrDefault().Replace("bearer ", "", StringComparison.InvariantCultureIgnoreCase);
+            var principal = GetPrincipalFromExpiredToken(token);
+            var username = principal.Identity.Name;
+
+            var isValidToken = _tokenStorage.IsValidToken(username, refreshToken);
+
+            if (!isValidToken)
+                throw new SecurityTokenException("Invalid  token");
+
+            var user = await _userManager.FindByEmailAsync(username);
+            var tokenContainer = GetTokenContainer(user, refreshToken);
+            //var newJwtToken = GenerateJwtToken(user);
+            //_tokenStorage.RemoveToken(username, token);
+            //_tokenStorage.AddToken(username, newJwtToken);
+            return Ok(tokenContainer);
+        }
+
+        private async Task<User> ProcessExternalUser(IGenericUserExternalData userProfile, string externalProvider)
         {
             var user = await _userManager.FindByEmailAsync(userProfile.Email);
 
@@ -144,10 +184,11 @@ namespace Authorization.Controllers
                     UserPicture = userProfile.UserPicture,
                     RegisteredOn = DateTime.Now,
                     ExternalProvider = externalProvider,
-                    ExternalProviderId=userProfile.ExternalProviderId
+                    ExternalProviderId = userProfile.ExternalProviderId
                 };
                 await _userManager.CreateAsync(user);
             }
+
             await _signInManager.SignInAsync(user, isPersistent: false);
             user.LastLoggedInOn = DateTime.Now;
             return user;
@@ -156,9 +197,8 @@ namespace Authorization.Controllers
         private string GenerateJwtToken(IdentityUser user)
         {
             var identity = new ClaimsIdentity(
-
                 new System.Security.Principal.GenericIdentity(user.Email, "Token"),
-                new[] { new Claim("ID", user.Id.ToString()) }
+                new[] {new Claim("ID", user.Id.ToString())}
             );
 
             var key = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["JwtKey"]));
@@ -170,7 +210,7 @@ namespace Authorization.Controllers
             var token = tokenHandler.CreateToken(new SecurityTokenDescriptor
             {
                 Issuer = _configuration["JwtIssuer"],
-                Audience = _configuration["JwtIssuer"],
+                Audience = _configuration["JwtAudince"],
                 SigningCredentials = creds,
                 Expires = expires,
                 Subject = identity
@@ -179,5 +219,54 @@ namespace Authorization.Controllers
             return tokenHandler.WriteToken(token);
         }
 
+        private TokenContainer GetTokenContainer(User user,string oldRefreshToken=null)
+        {
+            var newJwtToken = GenerateJwtToken(user);
+            var refreshToken = GenerateRefreshToken();
+
+            if (oldRefreshToken!=null)
+                _tokenStorage.RemoveToken(user.Email, oldRefreshToken);
+            _tokenStorage.AddToken(user.Email, refreshToken);
+
+            return new TokenContainer
+            {
+                Id=user.Id,
+                Token=newJwtToken,
+                RefreshToken=refreshToken
+            };
+        }
+
+        private string GenerateRefreshToken()
+        {
+            var randomNumber = new byte[32];
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(randomNumber);
+                return Convert.ToBase64String(randomNumber);
+            }
+        }
+
+        private ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
+        {
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateAudience = true,
+                ValidateIssuer = true,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["JwtKey"])),
+                ValidAudience = _configuration["JwtAudince"],
+                ValidIssuer = _configuration["JwtIssuer"],
+                ValidateLifetime = false
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            SecurityToken securityToken;
+            var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out securityToken);
+            var jwtSecurityToken = securityToken as JwtSecurityToken;
+            if (jwtSecurityToken == null || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+                throw new SecurityTokenException("Invalid token");
+
+            return principal;
+        }
     }
 }
