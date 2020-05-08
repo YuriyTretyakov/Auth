@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Authorization.ExternalLoginProvider.FaceBook;
 using Authorization.ExternalLoginProvider.Google;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 
 namespace Authorization
 {
@@ -94,6 +95,14 @@ namespace Authorization
                 };
 
             });
+            services.AddCors(options =>
+            {
+                options.AddPolicy("CorsPolicy",
+                    builder => builder.AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials());
+            });
 
             services.AddMvc()
                 .AddJsonOptions(
@@ -117,6 +126,7 @@ namespace Authorization
             services.AddSingleton<IConfiguration>(_config);
             services.AddDbContext<AuthDbContext>();
             services.AddTransient<AuthDataSeeder>();
+            
 
             services.AddIdentity<User, IdentityRole>(config =>
             {
@@ -133,6 +143,8 @@ namespace Authorization
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, AuthDataSeeder seedData)
         {
+            app.UseCors("CorsPolicy");
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -145,7 +157,7 @@ namespace Authorization
             app.UseAuthentication();
 
 
-          
+            
 
             app.UseMiddleware<Middleware>();
             app.UseSwagger();

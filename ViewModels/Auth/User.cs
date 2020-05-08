@@ -5,9 +5,10 @@ using System.Threading.Tasks;
 
 namespace Authorization.ViewModels.Auth
 {
-    public class User
+    public class TokenContainer
     {
         public string Id { get; set; }
         public string Token { get; set; }
+        public string RefreshToken { get; set; }
     }
 }

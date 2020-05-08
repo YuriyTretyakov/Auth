@@ -58,13 +58,12 @@ namespace Authorization.Controllers
                 if (signInResult.Succeeded)
                 {
                     var identityUser = await _userManager.FindByEmailAsync(loginModel.Email);
-                    var userToken = GenerateJwtToken(identityUser);
-                    _tokenStorage.AddToken(identityUser.Email, userToken);
-                    return Ok(new { Token = userToken, Id = identityUser.Id });
+                    var tokenContainer = GetTokenContainer(identityUser);
+                    return Ok(tokenContainer);
                 }
             }
 
-            return BadRequest();
+            return BadRequest("Invalid user data provided");
         }
 
         [AllowAnonymous]
@@ -97,9 +96,11 @@ namespace Authorization.Controllers
                 return BadRequest("Unable to retrieve user info by token provided");
 
             var identityUser = await ProcessExternalUser(userInfo, "Google");
-            var userToken = GenerateJwtToken(identityUser);
-            _tokenStorage.AddToken(identityUser.Email, userToken);
-            return Ok(new { Token = userToken, Id = identityUser.Id });
+            var tokenContainer = GetTokenContainer(identityUser);
+            return Ok(tokenContainer);
+            //var userToken = GenerateJwtToken(identityUser);
+            //_tokenStorage.AddToken(identityUser.Email, userToken);
+            //return Ok(new { Token = userToken, Id = identityUser.Id });
         }
 
         [AllowAnonymous]
@@ -134,14 +135,17 @@ namespace Authorization.Controllers
                 return BadRequest("Unable to retrieve User's email which is required");
 
             var identityUser = await ProcessExternalUser(userData, "FaceBook");
-            var userToken = GenerateJwtToken(identityUser);
-            _tokenStorage.AddToken(identityUser.Email, userToken);
-            return Ok(new { Token = userToken, Id = identityUser.Id });
+
+            var tokenContainer = GetTokenContainer(identityUser);
+
+            //var userToken = GenerateJwtToken(identityUser);
+            //_tokenStorage.AddToken(identityUser.Email, userToken);
+            return Ok(tokenContainer);
         }
 
         [AllowAnonymous]
         [HttpPost("RefreshToken")]
-        public async Task<IActionResult> RefreshToken()
+        public async Task<IActionResult> RefreshToken(string refreshToken)
         {
             StringValues token="";
             if (!Request.Headers.TryGetValue("Authorization", out token))
@@ -151,16 +155,17 @@ namespace Authorization.Controllers
             var principal = GetPrincipalFromExpiredToken(token);
             var username = principal.Identity.Name;
 
-            var isValidToken = _tokenStorage.IsValidToken(username, token);
+            var isValidToken = _tokenStorage.IsValidToken(username, refreshToken);
 
             if (!isValidToken)
                 throw new SecurityTokenException("Invalid  token");
 
             var user = await _userManager.FindByEmailAsync(username);
-            var newJwtToken = GenerateJwtToken(user);
-            _tokenStorage.RemoveToken(username, token);
-            _tokenStorage.AddToken(username, newJwtToken);
-            return Ok(new { Token = newJwtToken });
+            var tokenContainer = GetTokenContainer(user, refreshToken);
+            //var newJwtToken = GenerateJwtToken(user);
+            //_tokenStorage.RemoveToken(username, token);
+            //_tokenStorage.AddToken(username, newJwtToken);
+            return Ok(tokenContainer);
         }
 
         private async Task<User> ProcessExternalUser(IGenericUserExternalData userProfile, string externalProvider)
@@ -212,6 +217,23 @@ namespace Authorization.Controllers
             });
 
             return tokenHandler.WriteToken(token);
+        }
+
+        private TokenContainer GetTokenContainer(User user,string oldRefreshToken=null)
+        {
+            var newJwtToken = GenerateJwtToken(user);
+            var refreshToken = GenerateRefreshToken();
+
+            if (oldRefreshToken!=null)
+                _tokenStorage.RemoveToken(user.Email, oldRefreshToken);
+            _tokenStorage.AddToken(user.Email, refreshToken);
+
+            return new TokenContainer
+            {
+                Id=user.Id,
+                Token=newJwtToken,
+                RefreshToken=refreshToken
+            };
         }
 
         private string GenerateRefreshToken()
