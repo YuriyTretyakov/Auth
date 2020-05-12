@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 
 namespace Authorization.Controllers
 {
@@ -8,9 +9,9 @@ namespace Authorization.Controllers
     {
         [Authorize]
         [HttpGet("Get")]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            return Ok("You are authorized to see sthis shit");
+            return Ok(new  {data= "You are authorized to see sthis shit" });
         }
     }
 }

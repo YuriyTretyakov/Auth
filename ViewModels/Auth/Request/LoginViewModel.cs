@@ -1,14 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Authorization.ViewModels.Auth
+namespace Authorization.ViewModels.Auth.Request
 {
-    public class CreateUserViewModel
+    public class LoginViewModel
     {
         [Required]
         public string Email { get; set; }
         [Required]
         public string Password { get; set; }
-        public string Name { get; set; }
-
     }
 }
