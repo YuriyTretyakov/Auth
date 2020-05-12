@@ -10,7 +10,10 @@ using Authorization.ExternalLoginProvider.FaceBook;
 using Authorization.ExternalLoginProvider.Google;
 using Authorization.Identity;
 using Authorization.ViewModels.Auth;
+using Authorization.ViewModels.Auth.Request;
+using Authorization.ViewModels.Auth.Response;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -20,6 +23,7 @@ using User = Authorization.Identity.User;
 
 namespace Authorization.Controllers
 {
+   
     [Route("auth")]
     public class AuthController : Controller
     {
@@ -48,7 +52,7 @@ namespace Authorization.Controllers
         }
 
         [HttpPost("Login")]
-        public async Task<object> Login([FromBody] LoginViewModel loginModel)
+        public async Task<IActionResult> Login([FromBody] LoginViewModel loginModel)
         {
             if (ModelState.IsValid)
             {
@@ -98,9 +102,7 @@ namespace Authorization.Controllers
             var identityUser = await ProcessExternalUser(userInfo, "Google");
             var tokenContainer = GetTokenContainer(identityUser);
             return Ok(tokenContainer);
-            //var userToken = GenerateJwtToken(identityUser);
-            //_tokenStorage.AddToken(identityUser.Email, userToken);
-            //return Ok(new { Token = userToken, Id = identityUser.Id });
+
         }
 
         [AllowAnonymous]
@@ -143,29 +145,23 @@ namespace Authorization.Controllers
             return Ok(tokenContainer);
         }
 
+        
         [AllowAnonymous]
         [HttpPost("RefreshToken")]
-        public async Task<IActionResult> RefreshToken(string refreshToken)
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest refreshTokenRequest)
         {
-            StringValues token="";
-            if (!Request.Headers.TryGetValue("Authorization", out token))
-                return null;
+            if (ModelState.IsValid)
+            {
+                var isValidToken = _tokenStorage.IsValidToken(refreshTokenRequest.UserId, refreshTokenRequest.RefreshToken);
 
-            token = token.FirstOrDefault().Replace("bearer ", "", StringComparison.InvariantCultureIgnoreCase);
-            var principal = GetPrincipalFromExpiredToken(token);
-            var username = principal.Identity.Name;
-
-            var isValidToken = _tokenStorage.IsValidToken(username, refreshToken);
-
-            if (!isValidToken)
-                throw new SecurityTokenException("Invalid  token");
-
-            var user = await _userManager.FindByEmailAsync(username);
-            var tokenContainer = GetTokenContainer(user, refreshToken);
-            //var newJwtToken = GenerateJwtToken(user);
-            //_tokenStorage.RemoveToken(username, token);
-            //_tokenStorage.AddToken(username, newJwtToken);
-            return Ok(tokenContainer);
+                if (isValidToken)
+                {
+                    var user = await _userManager.FindByIdAsync(refreshTokenRequest.UserId);
+                    var tokenContainer = GetTokenContainer(user);
+                    return Ok(tokenContainer);
+                }
+            }
+            return BadRequest("Invalid token or user id");
         }
 
         private async Task<User> ProcessExternalUser(IGenericUserExternalData userProfile, string externalProvider)
@@ -225,8 +221,8 @@ namespace Authorization.Controllers
             var refreshToken = GenerateRefreshToken();
 
             if (oldRefreshToken!=null)
-                _tokenStorage.RemoveToken(user.Email, oldRefreshToken);
-            _tokenStorage.AddToken(user.Email, refreshToken);
+                _tokenStorage.RemoveToken(user.Id, oldRefreshToken);
+            _tokenStorage.AddToken(user.Id, refreshToken);
 
             return new TokenContainer
             {
@@ -244,29 +240,6 @@ namespace Authorization.Controllers
                 rng.GetBytes(randomNumber);
                 return Convert.ToBase64String(randomNumber);
             }
-        }
-
-        private ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
-        {
-            var tokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateAudience = true,
-                ValidateIssuer = true,
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["JwtKey"])),
-                ValidAudience = _configuration["JwtAudince"],
-                ValidIssuer = _configuration["JwtIssuer"],
-                ValidateLifetime = false
-            };
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            SecurityToken securityToken;
-            var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out securityToken);
-            var jwtSecurityToken = securityToken as JwtSecurityToken;
-            if (jwtSecurityToken == null || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
-                throw new SecurityTokenException("Invalid token");
-
-            return principal;
         }
     }
 }

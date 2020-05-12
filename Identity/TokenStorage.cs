@@ -6,34 +6,34 @@ namespace Authorization.Identity
     {
         private readonly Dictionary<string, List<string>> _container =new Dictionary<string, List<string>>();
 
-        public void AddToken(string user, string token)
+        public void AddToken(string userId, string token)
         {
-            if (string.IsNullOrEmpty(user) ||
+            if (string.IsNullOrEmpty(userId) ||
                 string.IsNullOrEmpty(token)) return;
 
-            if (!_container.ContainsKey(user))
-                _container[user] = new List<string> {token};
+            if (!_container.ContainsKey(userId))
+                _container[userId] = new List<string> {token};
             else
-                _container[user].Add(token);
+                _container[userId].Add(token);
         }
 
-        public bool IsValidToken(string user, string token)
+        public bool IsValidToken(string userId, string token)
         {
-            if (string.IsNullOrEmpty(user) ||
+            if (string.IsNullOrEmpty(userId) ||
                 string.IsNullOrEmpty(token)) return false;
 
-            if (!_container.ContainsKey(user)) return false;
+            if (!_container.ContainsKey(userId)) return false;
 
-            return _container[user].Contains(token);
+            return _container[userId].Contains(token);
         }
 
-        public void RemoveToken(string user, string token)
+        public void RemoveToken(string userId, string token)
         {
-            if  (string.IsNullOrEmpty(user)||
+            if  (string.IsNullOrEmpty(userId)||
              string.IsNullOrEmpty(token))return;
 
-            if (_container.ContainsKey(user))
-                _container[user].Remove(token);
+            if (_container.ContainsKey(userId))
+                _container[userId].Remove(token);
         }
 
     }
