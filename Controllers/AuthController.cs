@@ -106,42 +106,28 @@ namespace Authorization.Controllers
         }
 
         [AllowAnonymous]
-        [HttpGet("SignInFacebook")]
-        public void LoginFacebook()
+        [ProducesResponseType(typeof(TokenContainer), 200)]
+        [ProducesResponseType(typeof(SocialUserAddResponse), 400)]
+        [HttpPost("AddFbUser")]
+        public async Task<IActionResult> AddFbUser([FromBody] SocialUser socialUser)
         {
-            _faceBookProvider.RedirectUrl = $"{Request.Scheme}://{Request.Host}/auth/FBCallback/";
-            var loginfaceBookUrl = _faceBookProvider.GetLoginUrl();
-            Response.Redirect(loginfaceBookUrl);
-        }
 
-        [AllowAnonymous]
-        [HttpGet("FBCallback")]
-        public async Task<IActionResult> ExternalLoginCallback(string error_code = null, string error_message = null,
-            string code = null)
-        {
-            if (error_code != null)
-                return BadRequest(error_message);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
 
-            if (code == null)
-                return BadRequest("Unable to retrieve verification code");
+            var userData = await _faceBookProvider.GetFacebookUserInfo(socialUser.AuthToken);
 
-            _faceBookProvider.RedirectUrl = $"{Request.Scheme}://{Request.Host}/auth/FBCallback/";
-            await _faceBookProvider.RequestToken(code);
-
-            if (_faceBookProvider.Token == null)
-                return BadRequest("Unable to retrieve access token");
-
-            var userData = await _faceBookProvider.GetFacebookUserInfo();
+            if (userData?.Id != socialUser.Id)
+                return BadRequest("Attempt to add social user with inconsistent authentication data");
 
             if (userData?.Email == null)
-                return BadRequest("Unable to retrieve User's email which is required");
+                return BadRequest($"Unable to retrieve User's email from Facebook profile" +
+                                  $"Please go to your Facebook profile and make sure you have added email " +
+                                  $"in case you want to login with your Facebook user");
 
             var identityUser = await ProcessExternalUser(userData, "FaceBook");
 
             var tokenContainer = GetTokenContainer(identityUser);
-
-            //var userToken = GenerateJwtToken(identityUser);
-            //_tokenStorage.AddToken(identityUser.Email, userToken);
             return Ok(tokenContainer);
         }
 

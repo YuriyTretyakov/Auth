@@ -52,7 +52,7 @@ namespace Authorization
                     .Build();
             });
 
-            services.AddSingleton(new FacebookLoginProvider(_config["FaceBookAppId"], _config["FaceBookSecret"]));
+            services.AddSingleton(new FacebookLoginProvider());
             services.AddSingleton(new GoogleLoginProvider(_config["ClientId"],_config["ClientSecret"]));
             services.AddSingleton(new TokenStorage());
             services.AddAuthentication(options =>
