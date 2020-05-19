@@ -107,18 +107,19 @@ namespace Authorization.Controllers
 
         [AllowAnonymous]
         [ProducesResponseType(typeof(TokenContainer), 200)]
-        [ProducesResponseType(typeof(SocialUserAddResponse), 400)]
+        [ProducesResponseType(typeof(BadRequestResult), 400)]
         [HttpPost("AddFbUser")]
-        public async Task<IActionResult> AddFbUser([FromBody] SocialUser socialUser)
+        public async Task<IActionResult> AddFbUser(string token)
         {
 
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
 
-            var userData = await _faceBookProvider.GetFacebookUserInfo(socialUser.AuthToken);
 
-            if (userData?.Id != socialUser.Id)
-                return BadRequest("Attempt to add social user with inconsistent authentication data");
+            if (string.IsNullOrWhiteSpace(token))
+                return BadRequest("Fb token should be provided");
+
+            var userData = await _faceBookProvider.GetFacebookUserInfo(token);
+
+           
 
             if (userData?.Email == null)
                 return BadRequest($"Unable to retrieve User's email from Facebook profile" +
