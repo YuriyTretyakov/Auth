@@ -10,7 +10,7 @@ namespace Authorization.Controllers
     {
         [Authorize]
         [HttpGet("Get")]
-        public async Task<IActionResult> Index()
+        public IActionResult Index()
         {
             return Ok(new { data = $"You are authorized to see sthis shit {Guid.NewGuid()}" });
         }

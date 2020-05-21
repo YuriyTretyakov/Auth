@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Authorization.ExternalLoginProvider;
 using Authorization.ExternalLoginProvider.FaceBook;
 using Authorization.ExternalLoginProvider.Google;
+using Authorization.Helpers.RefreshToken;
 using Authorization.Identity;
 using Authorization.ViewModels.Auth;
 using Authorization.ViewModels.Auth.Request;
@@ -111,9 +112,6 @@ namespace Authorization.Controllers
         [HttpPost("AddFbUser")]
         public async Task<IActionResult> AddFbUser(string token)
         {
-
-
-
             if (string.IsNullOrWhiteSpace(token))
                 return BadRequest("Fb token should be provided");
 
@@ -132,24 +130,25 @@ namespace Authorization.Controllers
             return Ok(tokenContainer);
         }
 
-        
+
         [AllowAnonymous]
         [HttpPost("RefreshToken")]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest refreshTokenRequest)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
+                return BadRequest("Invalid Refresh token or user id");
+            try
             {
-                var isValidToken = _tokenStorage.IsValidToken(refreshTokenRequest.UserId, refreshTokenRequest.RefreshToken);
-
-                if (isValidToken)
-                {
-                    var user = await _userManager.FindByIdAsync(refreshTokenRequest.UserId);
-                    var tokenContainer = GetTokenContainer(user);
-                    return Ok(tokenContainer);
-                }
+                _tokenStorage.ValidateToken(refreshTokenRequest.UserId, refreshTokenRequest.RefreshToken);
+                var user = await _userManager.FindByIdAsync(refreshTokenRequest.UserId);
+                var tokenContainer = GetTokenContainer(user, refreshTokenRequest.RefreshToken);
+                return Ok(tokenContainer);
             }
-            return BadRequest("Invalid token or user id");
-        }
+            catch (TokenValidationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }   
 
         private async Task<User> ProcessExternalUser(IGenericUserExternalData userProfile, string externalProvider)
         {
@@ -204,29 +203,22 @@ namespace Authorization.Controllers
 
         private TokenContainer GetTokenContainer(User user,string oldRefreshToken=null)
         {
-            var newJwtToken = GenerateJwtToken(user);
-            var refreshToken = GenerateRefreshToken();
+            var refreshToken = new RefreshTokenGenerator().Generate(_configuration.GetValue<TimeSpan>("RefreshTokenLifetime"));
 
-            if (oldRefreshToken!=null)
+            if (oldRefreshToken != null)
                 _tokenStorage.RemoveToken(user.Id, oldRefreshToken);
             _tokenStorage.AddToken(user.Id, refreshToken);
+
+            var newJwtToken = GenerateJwtToken(user);
 
             return new TokenContainer
             {
                 Id=user.Id,
                 Token=newJwtToken,
-                RefreshToken=refreshToken
+                RefreshToken=refreshToken.Token
             };
         }
 
-        private string GenerateRefreshToken()
-        {
-            var randomNumber = new byte[32];
-            using (var rng = RandomNumberGenerator.Create())
-            {
-                rng.GetBytes(randomNumber);
-                return Convert.ToBase64String(randomNumber);
-            }
-        }
+        
     }
 }

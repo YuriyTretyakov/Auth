@@ -23,7 +23,7 @@ namespace Authorization.Middlewares
                 await _next(context);
             
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             
                 throw;
