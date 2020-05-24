@@ -1,30 +1,24 @@
 ﻿using System;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Authorization.ExternalLoginProvider;
 using Authorization.ExternalLoginProvider.FaceBook;
 using Authorization.ExternalLoginProvider.Google;
 using Authorization.Helpers.RefreshToken;
-using Authorization.Identity;
-using Authorization.ViewModels.Auth;
 using Authorization.ViewModels.Auth.Request;
 using Authorization.ViewModels.Auth.Response;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using User = Authorization.Identity.User;
 
 namespace Authorization.Controllers
 {
-   
+
     [Route("auth")]
     public class AuthController : Controller
     {
@@ -39,16 +33,12 @@ namespace Authorization.Controllers
         public AuthController(SignInManager<User> signInManager,
             UserManager<User> userManager,
             IConfiguration configuration,
-            FacebookLoginProvider faceBookProvider,
-            GoogleLoginProvider googleProvider,
             TokenStorage tokenStorage
         )
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _configuration = configuration;
-            _faceBookProvider = faceBookProvider;
-            _googleProvider = googleProvider;
             _tokenStorage = tokenStorage;
         }
 
@@ -71,60 +61,36 @@ namespace Authorization.Controllers
             return BadRequest("Invalid user data provided");
         }
 
-        [AllowAnonymous]
-        [HttpGet("LoginWithGoogle")]
-        public void LoginWithGoogle()
-        {
-            _googleProvider.RedirectUrl = $"{Request.Scheme}://{Request.Host}/auth/GoogleCallBack/";
-            var redirectUrl = _googleProvider.GetLoginUrl();
-            Response.Redirect(redirectUrl);
-        }
 
-
-        [AllowAnonymous]
-        [HttpGet("GoogleCallBack")]
-        public async Task<IActionResult> GoogleCallBack(string code = null)
-        {
-            if (code == null)
-                return BadRequest("Unable to retrieve verification code");
-
-            _googleProvider.RedirectUrl = $"{Request.Scheme}://{Request.Host}/auth/GoogleCallBack/";
-
-            var token = await _googleProvider.GetToken(code);
-
-            if (token==null)
-                return BadRequest("Unable to retrieve user token by verification code");
-
-            var userInfo = await _googleProvider.GetUserProfile(token.AccessToken);
-
-            if (userInfo == null)
-                return BadRequest("Unable to retrieve user info by token provided");
-
-            var identityUser = await ProcessExternalUser(userInfo, "Google");
-            var tokenContainer = GetTokenContainer(identityUser);
-            return Ok(tokenContainer);
-
-        }
+        
 
         [AllowAnonymous]
         [ProducesResponseType(typeof(TokenContainer), 200)]
         [ProducesResponseType(typeof(BadRequestResult), 400)]
-        [HttpPost("AddFbUser")]
-        public async Task<IActionResult> AddFbUser(string token)
+        [HttpPost("AddSocialUser")]
+        public async Task<IActionResult> AddSocialUser(string token,SocialProviders provider)
         {
             if (string.IsNullOrWhiteSpace(token))
-                return BadRequest("Fb token should be provided");
+                return BadRequest("Social network valid user token should be provided");
 
-            var userData = await _faceBookProvider.GetFacebookUserInfo(token);
+            IGenericUserExternalData userData=null;
 
-           
+
+            if (provider == SocialProviders.FaceBook)
+                userData = await new FacebookLoginProvider().GetUserProfile(token);
+            else if (provider == SocialProviders.Google)
+                userData = await new GoogleLoginProvider().GetUserProfile(token);
+            else
+                return BadRequest($"Unknown LoginProvider {provider}");
+
+
 
             if (userData?.Email == null)
-                return BadRequest($"Unable to retrieve User's email from Facebook profile" +
-                                  $"Please go to your Facebook profile and make sure you have added email " +
-                                  $"in case you want to login with your Facebook user");
+                return BadRequest($"Unable to retrieve User's email from {provider} profile" +
+                                  $"Please go to your {provider} profile and make sure you have added email " +
+                                  $"in case you want to login with your {provider} user");
 
-            var identityUser = await ProcessExternalUser(userData, "FaceBook");
+            var identityUser = await ProcessExternalUser(userData, provider.ToString());
 
             var tokenContainer = GetTokenContainer(identityUser);
             return Ok(tokenContainer);

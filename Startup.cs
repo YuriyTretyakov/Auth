@@ -52,9 +52,7 @@ namespace Authorization
                     .RequireAuthenticatedUser()
                     .Build();
             });
-
-            services.AddSingleton(new FacebookLoginProvider());
-            services.AddSingleton(new GoogleLoginProvider(_config["ClientId"],_config["ClientSecret"]));
+         
             services.AddSingleton(new TokenStorage());
             services.AddAuthentication(options =>
             {
@@ -121,6 +119,7 @@ namespace Authorization
                     {
                         {authName, new string[] { }}
                     });
+                c.DescribeAllEnumsAsStrings();
             }
             );
 
