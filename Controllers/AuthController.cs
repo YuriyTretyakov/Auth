@@ -142,12 +142,17 @@ namespace Authorization.Controllers
             return user;
         }
 
-        private string GenerateJwtToken(IdentityUser user)
+        private string GenerateJwtToken(User user)
         {
+            Claim[] claims = new[] { new Claim("ID", user.Id.ToString()),
+                new Claim("Name", $"{user.Name} {user.LastName}"),
+                new Claim("Pict",user.UserPicture)
+            };
+
             var identity = new ClaimsIdentity(
                 new System.Security.Principal.GenericIdentity(user.Email, "Token"),
-                new[] {new Claim("ID", user.Id.ToString())}
-            );
+                claims);
+
 
             var key = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["JwtKey"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

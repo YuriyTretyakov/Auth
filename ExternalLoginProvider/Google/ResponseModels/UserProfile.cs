@@ -1,8 +1,9 @@
-﻿using Newtonsoft.Json;
+﻿using Authorization.ExternalLoginProvider.FaceBook.ResponseModels;
+using Newtonsoft.Json;
 
 namespace Authorization.ExternalLoginProvider.Google.ResponseModels
 {
-    public class UserProfile:IGenericUserExternalData
+    public class UserProfile:IGenericUserExternalData,ICanContainError
     {
         [JsonProperty("id")]
         public string Id { get; set; }
@@ -25,5 +26,8 @@ namespace Authorization.ExternalLoginProvider.Google.ResponseModels
         public string UserPicture => Picture;
         public string ExternalProviderId => Id;
         public string UserName => Email;
+
+        public bool IsError { get; set; }
+        public string Message { get; set; }
     }
 }

@@ -20,7 +20,7 @@ namespace Authorization.ExternalLoginProvider.FaceBook.ResponseModels
         public Data Data { get; set; }
     }
 
-    public class UserProfile:IGenericUserExternalData
+    public class UserProfile:IGenericUserExternalData, ICanContainError
     {
         [JsonProperty("first_name")]
         public string FirstName { get; set; }
@@ -37,6 +37,16 @@ namespace Authorization.ExternalLoginProvider.FaceBook.ResponseModels
         public string Name => FirstName;
         public string UserPicture => Picture?.Data.Url;
         public string ExternalProviderId => Id;
+
+        public bool IsError { get; set; }
+        public string Message { get; set; }
     }
+
+    public interface ICanContainError
+    {
+        bool IsError { get; set; }
+        string Message { get; set; }
+    }
+
 }
 

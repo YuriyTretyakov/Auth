@@ -21,6 +21,8 @@ using Authorization.ExternalLoginProvider.FaceBook;
 using Authorization.ExternalLoginProvider.Google;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Authorization.Helpers.RefreshToken;
+using AutoMapper;
+using Authorization.Helpers;
 
 namespace Authorization
 {
@@ -122,7 +124,8 @@ namespace Authorization
                 c.DescribeAllEnumsAsStrings();
             }
             );
-
+            services.AddTransient<DL.ProductRepository>();
+            services.AddTransient<DL.FeedBackRepository>();
             services.AddSingleton<IConfiguration>(_config);
             services.AddDbContext<AuthDbContext>();
             services.AddTransient<AuthDataSeeder>();
@@ -138,6 +141,10 @@ namespace Authorization
               .AddEntityFrameworkStores<AuthDbContext>();
 
             services.AddLogging();
+
+            var configMap = new AutoMapperConfiguration().Configure();
+            var iMapper = configMap.CreateMapper();
+            services.AddSingleton(iMapper);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Authorization.ExternalLoginProvider.FaceBook.ResponseModels;
+using Newtonsoft.Json;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -17,7 +18,7 @@ namespace Authorization.ExternalLoginProvider.FaceBook
             _bearerToken = bearerToken;
         }
 
-        public async Task<TData> GetUserData<TData>(string url) where TData : class
+        public async Task<TData> GetUserData<TData>(string url) where TData : ICanContainError,new()
         {
             HttpResponseMessage response;
 
@@ -31,8 +32,15 @@ namespace Authorization.ExternalLoginProvider.FaceBook
             var jsonStr = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
-                return null;
-
+            {
+                var result = new TData
+                {
+                    IsError = true,
+                    Message = await response.Content.ReadAsStringAsync()
+                };
+                return result;
+            }
+             
             return JsonConvert.DeserializeObject<TData>(jsonStr);
         }
     }

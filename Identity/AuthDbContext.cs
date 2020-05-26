@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Authorization.DL.FeedBack;
+using Authorization.DL.Products;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using System;
 
 namespace Authorization.Identity
 {
@@ -17,8 +18,10 @@ namespace Authorization.Identity
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            optionsBuilder.UseSqlServer(_config[$"{env}:ConnectionStrings:AuthDbConnection"]);
+            optionsBuilder.UseSqlServer(_config["HomeDev:ConnectionStrings:AuthDbConnection"]);
         }
+
+        public DbSet<Product> Products { get; set; }
+        public DbSet<FeedBack> Feedback { get; set; }
     }
 }

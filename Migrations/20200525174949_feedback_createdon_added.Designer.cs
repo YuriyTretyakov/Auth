@@ -4,14 +4,16 @@ using Authorization.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Authorization.Migrations
 {
     [DbContext(typeof(AuthDbContext))]
-    partial class AuthDbContextModelSnapshot : ModelSnapshot
+    [Migration("20200525174949_feedback_createdon_added")]
+    partial class feedback_createdon_added
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -19,7 +21,7 @@ namespace Authorization.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128)
                 .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-            modelBuilder.Entity("Authorization.DL.FeedBack.FeedBack", b =>
+            modelBuilder.Entity("Authorization.Identity.FeedBack.FeedBack", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -29,20 +31,18 @@ namespace Authorization.Migrations
 
                     b.Property<string>("Details");
 
-                    b.Property<string>("Name");
-
-                    b.Property<string>("Picture");
-
                     b.Property<int>("Rate");
 
                     b.Property<string>("Summary");
+
+                    b.Property<string>("UserId");
 
                     b.HasKey("Id");
 
                     b.ToTable("Feedback");
                 });
 
-            modelBuilder.Entity("Authorization.DL.Products.Product", b =>
+            modelBuilder.Entity("Authorization.Identity.Products.Product", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
