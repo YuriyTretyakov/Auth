@@ -144,10 +144,7 @@ namespace Authorization.Controllers
 
         private string GenerateJwtToken(User user)
         {
-            Claim[] claims = new[] { new Claim("ID", user.Id.ToString()),
-                new Claim("Name", $"{user.Name} {user.LastName}"),
-                new Claim("Pict",user.UserPicture)
-            };
+            Claim[] claims = new[] { new Claim("ID", user.Id.ToString()) };
 
             var identity = new ClaimsIdentity(
                 new System.Security.Principal.GenericIdentity(user.Email, "Token"),

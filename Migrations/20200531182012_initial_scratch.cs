@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Authorization.Migrations
 {
-    public partial class initial : Migration
+    public partial class initial_scratch : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -42,12 +42,34 @@ namespace Authorization.Migrations
                     LockoutEnabled = table.Column<bool>(nullable: false),
                     AccessFailedCount = table.Column<int>(nullable: false),
                     Name = table.Column<string>(nullable: true),
+                    LastName = table.Column<string>(nullable: true),
                     RegisteredOn = table.Column<DateTime>(nullable: false),
-                    LastLoggedInOn = table.Column<DateTime>(nullable: false)
+                    LastLoggedInOn = table.Column<DateTime>(nullable: false),
+                    UserPicture = table.Column<string>(nullable: true),
+                    ExternalProvider = table.Column<string>(nullable: true),
+                    ExternalProviderId = table.Column<string>(nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Products",
+                columns: table => new
+                {
+                    Id = table.Column<int>(nullable: false)
+                        .Annotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn),
+                    Title = table.Column<string>(nullable: true),
+                    Description = table.Column<string>(nullable: true),
+                    Price = table.Column<float>(nullable: false),
+                    Picture = table.Column<string>(nullable: true),
+                    IsActive = table.Column<bool>(nullable: false),
+                    Duration = table.Column<TimeSpan>(nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Products", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -156,6 +178,57 @@ namespace Authorization.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "Feedback",
+                columns: table => new
+                {
+                    Id = table.Column<int>(nullable: false)
+                        .Annotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn),
+                    Summary = table.Column<string>(nullable: true),
+                    Details = table.Column<string>(nullable: true),
+                    Rate = table.Column<int>(nullable: false),
+                    UserId = table.Column<string>(nullable: true),
+                    CreatedOn = table.Column<DateTime>(nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Feedback", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Feedback_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Response",
+                columns: table => new
+                {
+                    Id = table.Column<int>(nullable: false)
+                        .Annotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn),
+                    FeedbackId = table.Column<int>(nullable: false),
+                    Details = table.Column<string>(nullable: true),
+                    UserId = table.Column<string>(nullable: true),
+                    CreatedOn = table.Column<DateTime>(nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Response", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Response_Feedback_FeedbackId",
+                        column: x => x.FeedbackId,
+                        principalTable: "Feedback",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Response_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
@@ -194,6 +267,21 @@ namespace Authorization.Migrations
                 column: "NormalizedUserName",
                 unique: true,
                 filter: "[NormalizedUserName] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Feedback_UserId",
+                table: "Feedback",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Response_FeedbackId",
+                table: "Response",
+                column: "FeedbackId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Response_UserId",
+                table: "Response",
+                column: "UserId");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
@@ -214,7 +302,16 @@ namespace Authorization.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "Products");
+
+            migrationBuilder.DropTable(
+                name: "Response");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "Feedback");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");

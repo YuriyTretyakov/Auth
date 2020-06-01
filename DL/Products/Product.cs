@@ -13,5 +13,6 @@ namespace Authorization.DL.Products
         public float Price { get; set; }
         public string Picture { get; set; }
         public bool IsActive { get; set; }
+        public TimeSpan Duration { get; set; }
     }
 }

@@ -14,10 +14,20 @@ namespace Authorization.Controllers
             _ds = ds;
         }
 
-        [HttpGet("products")]
+        [HttpGet("all")]
         public IActionResult GetAllProducts()
         {
             return Ok(_ds.GetAllProducts());
+        }
+
+        [HttpGet("GetProduct/{id}")]
+        public IActionResult GetProductById(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id) ||
+                    !int.TryParse(id, out int numId))
+                return BadRequest($"Invalid Id: '{id}'");
+
+            return Ok(_ds.GetProductById(numId));
         }
     }
 }

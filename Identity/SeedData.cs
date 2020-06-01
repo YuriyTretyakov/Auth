@@ -31,7 +31,10 @@ namespace Authorization.Identity
                 var user = new User
                 {
                     UserName = _seedUserName,
-                    Email = _seedUserName
+                    Email = _seedUserName,
+                    Name="Administrator",
+                    LastName="Root",
+                    UserPicture= "https://itpotok.ru/wp-content/uploads/2014/08/image_1-251x300.png"
                 };
 
                 IdentityResult result = await _userManager.CreateAsync(user, "P@ssword");

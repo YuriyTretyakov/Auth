@@ -32,11 +32,12 @@ namespace Authorization.Controllers
             if (!ModelState.IsValid)
                 return BadRequest("Can't add feedback");
 
-            var name = User.Claims.Where(c => c.Type == "Name").FirstOrDefault().Value;
-            var picture = User.Claims.Where(c => c.Type == "Pict").FirstOrDefault().Value;
+            var userId= User.Claims.Where(c => c.Type == "ID").FirstOrDefault().Value;
 
-            await _feedbackRepo.AddFeedBack(feedback, name,picture);
-                return Ok();
+            var user = await _userManager.FindByIdAsync(userId);
+
+            await _feedbackRepo.AddFeedBack(feedback, user);
+            return Ok(_feedbackRepo.GetAllFeedbacks());
         }
 
         [HttpGet("all")]
@@ -51,6 +52,23 @@ namespace Authorization.Controllers
         {
             return Ok();
         }
+
+        [Authorize]
+        [HttpPost("AddCommentForFeedback")]
+        public async Task<IActionResult> AddCommentForFeedback([FromBody] AddCommentRequest request)
+        {
+
+            if (!ModelState.IsValid)
+                return BadRequest("Invalid data provided");
+
+            var userId = User.Claims.Where(c => c.Type == "ID").FirstOrDefault().Value;
+            var user = await _userManager.FindByIdAsync(userId);
+
+            await _feedbackRepo.AddCommentToFeedback(request, user);
+
+            return Ok(_feedbackRepo.GetAllFeedbacks());
+        }
+        
 
     }
 }

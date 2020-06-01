@@ -19,8 +19,16 @@ namespace Authorization.Helpers
         {
             public ClientMappingProfile()
             {
-                CreateMap<RequestFeedback,FeedBack>().ForMember(m=>m.Id,s=>s.Ignore()).ReverseMap();
-                CreateMap<ResponseFeedback, FeedBack>().ForMember(s => s.Id, d => d.Ignore()).ReverseMap();
+
+                CreateMap<FeedBack, ResponseFeedback>()
+                    .ForMember(s => s.Name, s => s.MapFrom(m => m.User.Name + " " + m.User.LastName))
+                    .ForMember(s => s.Picture, s => s.MapFrom(m => m.User.UserPicture));
+                CreateMap<RequestFeedback, FeedBack>().ReverseMap();
+
+                CreateMap<DL.FeedBack.Response, ViewModels.Feedback.Response>()
+                    .ForMember(s=>s.Name,s=>s.MapFrom(m=>m.User.Name + " "+ m.User.LastName))
+                    .ForMember(s => s.Picture, s => s.MapFrom(m => m.User.UserPicture));
+                
             }
         }
     }

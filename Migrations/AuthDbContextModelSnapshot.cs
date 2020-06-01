@@ -29,17 +29,40 @@ namespace Authorization.Migrations
 
                     b.Property<string>("Details");
 
-                    b.Property<string>("Name");
-
-                    b.Property<string>("Picture");
-
                     b.Property<int>("Rate");
 
                     b.Property<string>("Summary");
 
+                    b.Property<string>("UserId");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("Feedback");
+                });
+
+            modelBuilder.Entity("Authorization.DL.FeedBack.Response", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<DateTime>("CreatedOn");
+
+                    b.Property<string>("Details");
+
+                    b.Property<int>("FeedbackId");
+
+                    b.Property<string>("UserId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeedbackId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Response");
                 });
 
             modelBuilder.Entity("Authorization.DL.Products.Product", b =>
@@ -49,6 +72,8 @@ namespace Authorization.Migrations
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("Description");
+
+                    b.Property<TimeSpan>("Duration");
 
                     b.Property<bool>("IsActive");
 
@@ -236,6 +261,25 @@ namespace Authorization.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens");
+                });
+
+            modelBuilder.Entity("Authorization.DL.FeedBack.FeedBack", b =>
+                {
+                    b.HasOne("Authorization.Identity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
+                });
+
+            modelBuilder.Entity("Authorization.DL.FeedBack.Response", b =>
+                {
+                    b.HasOne("Authorization.DL.FeedBack.FeedBack")
+                        .WithMany("Responses")
+                        .HasForeignKey("FeedbackId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Authorization.Identity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
