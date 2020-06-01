@@ -28,18 +28,16 @@ namespace Authorization.DL
             await SaveChangesAsync();
         }
 
-        public  ResponseFeedback[] GetAllFeedbacks()
+        public  ResponseFeedback[] GetAllFeedbacks(int pagenumber=0, int pagesize=3)
         {
             var feedbacks = _context.Feedback.Include(t => t.User).Include(t=>t.Responses).Include("Responses.User");
+            var sortedFeedbacks = feedbacks.OrderByDescending(r => r.CreatedOn);
 
-            var sortedFeedbacksAndComments = feedbacks.OrderByDescending(r => r.CreatedOn).ToList();
 
-         //   feedbacks.Include(f => f.Responses).Include("Responses.User");
-
-            sortedFeedbacksAndComments.ForEach(f => f.Responses = f.Responses.OrderByDescending(r => r.CreatedOn).ToList());
-
-            var feedbacksSorted = _mapper.Map<FeedBack.FeedBack[], ResponseFeedback[]>(sortedFeedbacksAndComments.ToArray());
-            return feedbacksSorted;
+            var feedbackPaged = sortedFeedbacks.Take((pagenumber* pagesize)+ pagesize).ToList();
+            feedbackPaged.ForEach(f => f.Responses = f.Responses.OrderByDescending(r => r.CreatedOn).ToList());
+            var feedbacksModel = _mapper.Map<FeedBack.FeedBack[], ResponseFeedback[]>(feedbackPaged.ToArray());
+            return feedbacksModel;
         }
 
         public async Task AddCommentToFeedback(AddCommentRequest requestModel,User user)
@@ -55,9 +53,7 @@ namespace Authorization.DL
 
 
             var feedback = _context.Feedback.Include(t => t.User).Include(t => t.Responses);
-
             var concreteFeedback = _context.Feedback.FirstOrDefault(f => f.Id == requestModel.FeedbackId);
-
 
             if (concreteFeedback.Responses == null)
                 concreteFeedback.Responses = new HashSet<FeedBack.Response>();

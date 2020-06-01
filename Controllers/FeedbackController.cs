@@ -47,6 +47,13 @@ namespace Authorization.Controllers
             return Ok(feedbacks);
         }
 
+        [HttpGet("get/{pagenumber}/{pagesize}")]
+        public IActionResult GetPagedFeedbacks(int pagenumber,int pagesize)
+        {
+            var feedbacks = _feedbackRepo.GetAllFeedbacks(pagenumber, pagesize);
+            return Ok(feedbacks);
+        }
+
         [HttpGet("get/{userid}")]
         public IActionResult GetByUser(string userid)
         {
