@@ -4,13 +4,13 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace ColibriWebApi.ViewModels.Feedback
+namespace ColibriWebApi.ViewModels.Scheduler
 {
-    public class AddCommentRequest
+    public class TimeSlotWithDurationRequest
     {
         [Required]
-        public int FeedbackId { get; set; }
+        public string Date { get; set; }
         [Required]
-        public string Text { get; set; }
+        public TimeSpan Duration { get; set; }
     }
 }

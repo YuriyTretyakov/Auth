@@ -1,9 +1,9 @@
-﻿using Authorization.DL.Products;
-using Authorization.Identity;
+﻿using ColibriWebApi.DL;
+using ColibriWebApi.Identity;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Authorization.DL
+namespace ColibriWebApi.DL
 {
     public class ProductRepository
     {
@@ -16,6 +16,11 @@ namespace Authorization.DL
 
         public Product[] GetAllProducts()
         {
+            return _context.Products.ToArray();
+        }
+
+        public Product[] GetAllActiveProducts()
+        {
             return _context.Products.Where(p=>p.IsActive==true).ToArray();
         }
 
@@ -27,6 +32,27 @@ namespace Authorization.DL
         public async Task<bool> SaveChangesAsync()
         {
             return ((await _context.SaveChangesAsync()) > 0);
+        }
+
+        public async Task UpdateProduct(Product product,int id)
+        {
+            var prod = _context.Products.FirstOrDefault(p => p.Id == id);
+
+            prod.IsActive = product.IsActive;
+
+            prod.Picture = product.Picture;
+            prod.Price = product.Price;
+            prod.Description = product.Description;
+            prod.Duration = product.Duration;
+            prod.Title = product.Title;
+
+            await SaveChangesAsync();
+        }
+
+        public async Task CreateProduct(Product product)
+        {
+            _context.Products.Add(product);
+            await SaveChangesAsync();
         }
     }
 }

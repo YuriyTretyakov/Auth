@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Authorization.ViewModels.Auth.Request
+namespace ColibriWebApi.ViewModels.Auth.Request
 {
     public class CreateUserViewModel
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Authorization.Helpers.RefreshToken
+namespace ColibriWebApi.Helpers.RefreshToken
 {
     public class RefreshToken
     {

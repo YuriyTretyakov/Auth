@@ -1,12 +1,12 @@
-﻿using Authorization.Identity;
-using Authorization.ViewModels.Feedback;
+﻿using ColibriWebApi.Identity;
+using ColibriWebApi.ViewModels.Feedback;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-namespace Authorization.DL
+namespace ColibriWebApi.DL
 {
     public class FeedBackRepository
     {
@@ -21,7 +21,7 @@ namespace Authorization.DL
 
         public async Task AddFeedBack(RequestFeedback feedback,User user)
         {
-            var feedbackDb = _mapper.Map<RequestFeedback, FeedBack.FeedBack>(feedback);
+            var feedbackDb = _mapper.Map<RequestFeedback, FeedBack>(feedback);
             feedbackDb.CreatedOn = DateTime.UtcNow;
             feedbackDb.User = user;
             _context.Feedback.Add(feedbackDb);
@@ -36,14 +36,14 @@ namespace Authorization.DL
 
             var feedbackPaged = sortedFeedbacks.Take((pagenumber* pagesize)+ pagesize).ToList();
             feedbackPaged.ForEach(f => f.Responses = f.Responses.OrderByDescending(r => r.CreatedOn).ToList());
-            var feedbacksModel = _mapper.Map<FeedBack.FeedBack[], ResponseFeedback[]>(feedbackPaged.ToArray());
+            var feedbacksModel = _mapper.Map<FeedBack[], ResponseFeedback[]>(feedbackPaged.ToArray());
             return feedbacksModel;
         }
 
         public async Task AddCommentToFeedback(AddCommentRequest requestModel,User user)
         {
 
-            var comment = new FeedBack.Response
+            var comment = new Response
             {
                 User = user,
                 CreatedOn = DateTime.UtcNow,
@@ -51,12 +51,10 @@ namespace Authorization.DL
                 FeedbackId = requestModel.FeedbackId
             };
 
-
-            var feedback = _context.Feedback.Include(t => t.User).Include(t => t.Responses);
             var concreteFeedback = _context.Feedback.FirstOrDefault(f => f.Id == requestModel.FeedbackId);
 
             if (concreteFeedback.Responses == null)
-                concreteFeedback.Responses = new HashSet<FeedBack.Response>();
+                concreteFeedback.Responses = new HashSet<Response>();
 
             concreteFeedback.Responses.Add(comment);
             await SaveChangesAsync();

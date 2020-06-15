@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using Authorization.Identity;
+using ColibriWebApi.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -14,17 +14,16 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json.Serialization;
 using Microsoft.AspNetCore.Identity;
 using Swashbuckle.AspNetCore.Swagger;
-using Authorization.Middlewares;
+using ColibriWebApi.Middlewares;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
-using Authorization.ExternalLoginProvider.FaceBook;
-using Authorization.ExternalLoginProvider.Google;
-using Microsoft.AspNetCore.Cors.Infrastructure;
-using Authorization.Helpers.RefreshToken;
-using AutoMapper;
-using Authorization.Helpers;
+using ColibriWebApi.Helpers.RefreshToken;
+using ColibriWebApi.Helpers;
+using ColibriWebApi.DL;
+using ColibriWebApi.ExternalApis.Google;
+using Microsoft.AspNetCore.Http.Features;
 
-namespace Authorization
+namespace ColibriWebApi
 {
     public class Startup
     {
@@ -124,12 +123,18 @@ namespace Authorization
                 c.DescribeAllEnumsAsStrings();
             }
             );
+
+            services.AddSingleton<IConfiguration>(_config);
             services.AddTransient<DL.ProductRepository>();
             services.AddTransient<DL.FeedBackRepository>();
-            services.AddSingleton<IConfiguration>(_config);
+            services.AddTransient<SchedulerRepository>();
             services.AddDbContext<AuthDbContext>();
             services.AddTransient<AuthDataSeeder>();
-            
+            services.AddSingleton<GoogleApi>(new GoogleApi(_config));
+            services.Configure<FormOptions>(options =>
+            {
+                options.MemoryBufferThreshold = Int32.MaxValue;
+            });
 
             services.AddIdentity<User, IdentityRole>(config =>
             {
@@ -176,8 +181,8 @@ namespace Authorization
 
             app.UseHttpsRedirection();
 
-            
-            
+
+            app.UseStaticFiles();
             app.UseMvc();
             seedData.SeedUsers().Wait();
         }

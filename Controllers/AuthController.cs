@@ -1,22 +1,23 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
-using Authorization.ExternalLoginProvider;
-using Authorization.ExternalLoginProvider.FaceBook;
-using Authorization.ExternalLoginProvider.Google;
-using Authorization.Helpers.RefreshToken;
-using Authorization.ViewModels.Auth.Request;
-using Authorization.ViewModels.Auth.Response;
+using ColibriWebApi.ExternalLoginProvider;
+using ColibriWebApi.ExternalLoginProvider.FaceBook;
+using ColibriWebApi.ExternalLoginProvider.Google;
+using ColibriWebApi.Helpers.RefreshToken;
+using ColibriWebApi.ViewModels.Auth.Request;
+using ColibriWebApi.ViewModels.Auth.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using User = Authorization.Identity.User;
+using User = ColibriWebApi.Identity.User;
 
-namespace Authorization.Controllers
+namespace ColibriWebApi.Controllers
 {
 
     [Route("auth")]
@@ -53,7 +54,7 @@ namespace Authorization.Controllers
                 if (signInResult.Succeeded)
                 {
                     var identityUser = await _userManager.FindByEmailAsync(loginModel.Email);
-                    var tokenContainer = GetTokenContainer(identityUser);
+                    var tokenContainer = await GetTokenContainer(identityUser);
                     return Ok(tokenContainer);
                 }
             }
@@ -92,7 +93,7 @@ namespace Authorization.Controllers
 
             var identityUser = await ProcessExternalUser(userData, provider.ToString());
 
-            var tokenContainer = GetTokenContainer(identityUser);
+            var tokenContainer = await GetTokenContainer(identityUser);
             return Ok(tokenContainer);
         }
 
@@ -107,7 +108,7 @@ namespace Authorization.Controllers
             {
                 _tokenStorage.ValidateToken(refreshTokenRequest.UserId, refreshTokenRequest.RefreshToken);
                 var user = await _userManager.FindByIdAsync(refreshTokenRequest.UserId);
-                var tokenContainer = GetTokenContainer(user, refreshTokenRequest.RefreshToken);
+                var tokenContainer = await GetTokenContainer(user, refreshTokenRequest.RefreshToken);
                 return Ok(tokenContainer);
             }
             catch (TokenValidationException ex)
@@ -142,14 +143,22 @@ namespace Authorization.Controllers
             return user;
         }
 
-        private string GenerateJwtToken(User user)
+        private async Task<string> GenerateJwtToken(User user)
         {
-            Claim[] claims = new[] { new Claim("ID", user.Id.ToString()) };
+            var claims = new List<Claim> { new Claim("ID", user.Id.ToString()) };
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            if (roles.Contains("Administrator"))
+                claims.Add(new Claim("Role","Admin"));
+             else
+                claims.Add(new Claim("Role", "Regular"));
 
             var identity = new ClaimsIdentity(
                 new System.Security.Principal.GenericIdentity(user.Email, "Token"),
                 claims);
 
+           
 
             var key = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["JwtKey"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -169,7 +178,7 @@ namespace Authorization.Controllers
             return tokenHandler.WriteToken(token);
         }
 
-        private TokenContainer GetTokenContainer(User user,string oldRefreshToken=null)
+        private async Task<TokenContainer> GetTokenContainer(User user,string oldRefreshToken=null)
         {
             var refreshToken = new RefreshTokenGenerator().Generate(_configuration.GetValue<TimeSpan>("RefreshTokenLifetime"));
 
@@ -177,7 +186,7 @@ namespace Authorization.Controllers
                 _tokenStorage.RemoveToken(user.Id, oldRefreshToken);
             _tokenStorage.AddToken(user.Id, refreshToken);
 
-            var newJwtToken = GenerateJwtToken(user);
+            var newJwtToken = await GenerateJwtToken(user);
 
             return new TokenContainer
             {

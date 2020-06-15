@@ -1,4 +1,4 @@
-﻿namespace Authorization.ExternalLoginProvider
+﻿namespace ColibriWebApi.ExternalLoginProvider
 {
     public interface IGenericUserExternalData
     {

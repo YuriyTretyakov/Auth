@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Authorization.ViewModels.Feedback
+namespace ColibriWebApi.ViewModels.Feedback
 {
     public class ResponseFeedback
     {

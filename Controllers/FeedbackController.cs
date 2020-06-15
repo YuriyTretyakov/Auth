@@ -4,14 +4,14 @@ using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Authorization.DL;
-using Authorization.Identity;
-using Authorization.ViewModels.Feedback;
+using ColibriWebApi.DL;
+using ColibriWebApi.Identity;
+using ColibriWebApi.ViewModels.Feedback;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Authorization.Controllers
+namespace ColibriWebApi.Controllers
 {
     [Route("FeedBack")]
     public class FeedBackController : Controller

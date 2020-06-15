@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28010.2041
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Authorization", "Authorization.csproj", "{A3B491C1-1DFA-4338-85A0-EA9F1C3C9A81}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ColibriWebApi", "ColibriWebApi.csproj", "{A3B491C1-1DFA-4338-85A0-EA9F1C3C9A81}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

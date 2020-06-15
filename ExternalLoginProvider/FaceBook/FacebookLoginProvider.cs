@@ -1,9 +1,9 @@
 ﻿using System.Net.Http;
 using System.Threading.Tasks;
-using Authorization.ExternalLoginProvider.FaceBook.ResponseModels;
+using ColibriWebApi.ExternalLoginProvider.FaceBook.ResponseModels;
 using Newtonsoft.Json;
 
-namespace Authorization.ExternalLoginProvider.FaceBook
+namespace ColibriWebApi.ExternalLoginProvider.FaceBook
 {
     public class FacebookLoginProvider
     {
@@ -13,7 +13,7 @@ namespace Authorization.ExternalLoginProvider.FaceBook
                 return null;
 
             var url = $"https://graph.facebook.com/me?fields=id,first_name,last_name,middle_name,name,name_format,picture,short_name,email&access_token={token}";
-            var data = await new DataProvider().GetUserData<UserProfile>(url);
+            var data = await new DataProvider().GetData<UserProfile>(url);
             return data;
         }
     }

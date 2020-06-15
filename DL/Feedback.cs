@@ -1,10 +1,9 @@
-﻿using Authorization.Identity;
+﻿using ColibriWebApi.Identity;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Authorization.DL.FeedBack
+namespace ColibriWebApi.DL
 {
     public class FeedBack
     {

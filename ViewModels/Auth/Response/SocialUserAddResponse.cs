@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Authorization.ViewModels.Auth.Response
+namespace ColibriWebApi.ViewModels.Auth.Response
 {
     public class SocialUserAddResponse
     {

@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Authorization.ExternalLoginProvider.FaceBook;
-using Authorization.ExternalLoginProvider.Google.ResponseModels;
+using ColibriWebApi.ExternalLoginProvider.FaceBook;
+using ColibriWebApi.ExternalLoginProvider.Google.ResponseModels;
 using Newtonsoft.Json;
 
-namespace Authorization.ExternalLoginProvider.Google
+namespace ColibriWebApi.ExternalLoginProvider.Google
 {
     public class GoogleLoginProvider
     {
@@ -15,7 +15,7 @@ namespace Authorization.ExternalLoginProvider.Google
                 return null;
 
             var url = "https://www.googleapis.com/oauth2/v1/userinfo?alt=json";
-            var data = await new DataProvider(token).GetUserData<UserProfile>(url);
+            var data = await new DataProvider(token).GetData<UserProfile>(url);
             return data;
         }
     }

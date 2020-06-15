@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Authorization.Identity;
-using Authorization.ViewModels.UserData;
+using ColibriWebApi.Identity;
+using ColibriWebApi.ViewModels.UserData;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Authorization.Controllers
+namespace ColibriWebApi.Controllers
 {
     public class UserDataController : Controller
     {
@@ -36,7 +36,9 @@ namespace Authorization.Controllers
                 Name = identityUser.Name,
                 LastName = identityUser.LastName,
                 UserPic = identityUser.UserPicture,
-                Id=identityUser.Id
+                Id=identityUser.Id,
+                Email=identityUser.Email,
+                PhoneNumber=identityUser.PhoneNumber
             });
 }
     }

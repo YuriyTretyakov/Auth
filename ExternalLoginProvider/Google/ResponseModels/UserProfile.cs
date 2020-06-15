@@ -1,7 +1,7 @@
-﻿using Authorization.ExternalLoginProvider.FaceBook.ResponseModels;
+﻿using ColibriWebApi.ExternalLoginProvider.FaceBook.ResponseModels;
 using Newtonsoft.Json;
 
-namespace Authorization.ExternalLoginProvider.Google.ResponseModels
+namespace ColibriWebApi.ExternalLoginProvider.Google.ResponseModels
 {
     public class UserProfile:IGenericUserExternalData,ICanContainError
     {

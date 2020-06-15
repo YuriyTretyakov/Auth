@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Security.Cryptography;
 
-namespace Authorization.Helpers.RefreshToken
+namespace ColibriWebApi.Helpers.RefreshToken
 {
     public class RefreshTokenGenerator
     {

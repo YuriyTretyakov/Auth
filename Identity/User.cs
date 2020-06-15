@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using System;
 
-namespace Authorization.Identity
+namespace ColibriWebApi.Identity
 {
     public class User:IdentityUser
     {

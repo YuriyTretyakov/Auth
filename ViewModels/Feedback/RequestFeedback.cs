@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace Authorization.ViewModels.Feedback
+namespace ColibriWebApi.ViewModels.Feedback
 {
     public class RequestFeedback
     {

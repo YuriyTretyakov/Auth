@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Authorization.ExternalLoginProvider.FaceBook.ResponseModels
+namespace ColibriWebApi.ExternalLoginProvider.FaceBook.ResponseModels
 {
     public class Data
     {

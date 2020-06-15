@@ -1,10 +1,9 @@
-﻿using Authorization.DL.FeedBack;
-using Authorization.DL.Products;
+﻿using ColibriWebApi.DL;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
-namespace Authorization.Identity
+namespace ColibriWebApi.Identity
 {
     public class AuthDbContext:IdentityDbContext<User>
     {
@@ -23,5 +22,6 @@ namespace Authorization.Identity
 
         public DbSet<Product> Products { get; set; }
         public DbSet<FeedBack> Feedback { get; set; }
+        public DbSet<Appointment> Appointments { get; set; }
     }
 }

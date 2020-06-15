@@ -10,8 +10,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ColibriWebApi.Migrations
 {
     [DbContext(typeof(AuthDbContext))]
-    [Migration("20200531182012_initial_scratch")]
-    partial class initial_scratch
+    [Migration("20200608205645_appointment_dl_added")]
+    partial class appointment_dl_added
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -21,7 +21,42 @@ namespace ColibriWebApi.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128)
                 .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-            modelBuilder.Entity("Authorization.DL.FeedBack.FeedBack", b =>
+            modelBuilder.Entity("ColibriWebApi.DL.Appointment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<string>("CancelationReason");
+
+                    b.Property<string>("Comment");
+
+                    b.Property<DateTime>("End");
+
+                    b.Property<string>("PhoneNumber");
+
+                    b.Property<double>("Price");
+
+                    b.Property<int?>("ProductId");
+
+                    b.Property<DateTime>("Start");
+
+                    b.Property<int>("State");
+
+                    b.Property<string>("Title");
+
+                    b.Property<string>("UserId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Appointments");
+                });
+
+            modelBuilder.Entity("ColibriWebApi.DL.FeedBack", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -44,30 +79,7 @@ namespace ColibriWebApi.Migrations
                     b.ToTable("Feedback");
                 });
 
-            modelBuilder.Entity("Authorization.DL.FeedBack.Response", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
-
-                    b.Property<DateTime>("CreatedOn");
-
-                    b.Property<string>("Details");
-
-                    b.Property<int>("FeedbackId");
-
-                    b.Property<string>("UserId");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FeedbackId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Response");
-                });
-
-            modelBuilder.Entity("Authorization.DL.Products.Product", b =>
+            modelBuilder.Entity("ColibriWebApi.DL.Product", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -90,7 +102,30 @@ namespace ColibriWebApi.Migrations
                     b.ToTable("Products");
                 });
 
-            modelBuilder.Entity("Authorization.Identity.User", b =>
+            modelBuilder.Entity("ColibriWebApi.DL.Response", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<DateTime>("CreatedOn");
+
+                    b.Property<string>("Details");
+
+                    b.Property<int>("FeedbackId");
+
+                    b.Property<string>("UserId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeedbackId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Response");
+                });
+
+            modelBuilder.Entity("ColibriWebApi.Identity.User", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd();
@@ -265,21 +300,32 @@ namespace ColibriWebApi.Migrations
                     b.ToTable("AspNetUserTokens");
                 });
 
-            modelBuilder.Entity("Authorization.DL.FeedBack.FeedBack", b =>
+            modelBuilder.Entity("ColibriWebApi.DL.Appointment", b =>
                 {
-                    b.HasOne("Authorization.Identity.User", "User")
+                    b.HasOne("ColibriWebApi.DL.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId");
+
+                    b.HasOne("ColibriWebApi.Identity.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
                 });
 
-            modelBuilder.Entity("Authorization.DL.FeedBack.Response", b =>
+            modelBuilder.Entity("ColibriWebApi.DL.FeedBack", b =>
                 {
-                    b.HasOne("Authorization.DL.FeedBack.FeedBack")
+                    b.HasOne("ColibriWebApi.Identity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
+                });
+
+            modelBuilder.Entity("ColibriWebApi.DL.Response", b =>
+                {
+                    b.HasOne("ColibriWebApi.DL.FeedBack")
                         .WithMany("Responses")
                         .HasForeignKey("FeedbackId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("Authorization.Identity.User", "User")
+                    b.HasOne("ColibriWebApi.Identity.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
                 });
@@ -294,7 +340,7 @@ namespace ColibriWebApi.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("Authorization.Identity.User")
+                    b.HasOne("ColibriWebApi.Identity.User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -302,7 +348,7 @@ namespace ColibriWebApi.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("Authorization.Identity.User")
+                    b.HasOne("ColibriWebApi.Identity.User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -315,7 +361,7 @@ namespace ColibriWebApi.Migrations
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("Authorization.Identity.User")
+                    b.HasOne("ColibriWebApi.Identity.User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -323,7 +369,7 @@ namespace ColibriWebApi.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("Authorization.Identity.User")
+                    b.HasOne("ColibriWebApi.Identity.User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
